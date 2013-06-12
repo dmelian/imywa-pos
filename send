@@ -1,0 +1,8 @@
+#! /bin/bash
+
+baseDir=/usr/local/imywa
+wwwDir=/var/www/apps
+
+rsync -avPz --delete --force --exclude .git --delete-excluded source/* $baseDir/source/pos
+#rsync -avPz --force --exclude .svn www/ $wwwDir
+
