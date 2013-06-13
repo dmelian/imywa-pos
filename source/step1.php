@@ -16,14 +16,14 @@ class pos_step1 extends bas_frmx_form{
         $groups->setEvent("select_group");
         $groups->setRecord();
         
-        $items= new bas_frmx_panelGridQuery("items",array('width'=>1,'height'=>5));
+        $items= new bas_frmx_panelGridQuery("items",array('width'=>4,'height'=>5));
         $items->query->add("item");
         $items->query->addcol("id","x","item");
         $items->classMain="id";
         $items->setEvent("select_item");
         $items->setRecord();
         
-        $quantities= new bas_frmx_panelGridQuery("items",array('width'=>1,'height'=>5));
+        $quantities= new bas_frmx_panelGridQuery("items",array('width'=>5,'height'=>1));
         
         // id,obj,y,x,width,height
         $frame= new bas_frmx_gridFrame("buttons", array("POS"));
