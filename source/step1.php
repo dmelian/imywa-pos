@@ -23,16 +23,17 @@ class pos_step1 extends bas_frmx_form{
         $items->setEvent("select_item");
         $items->setRecord();
         
-        $quantities= new bas_frmx_panelGridQuery("items",array('width'=>5,'height'=>1));
+        $quantities= new bas_frmx_panelGrid("items",array('width'=>5,'height'=>1));
         
         // id,obj,y,x,width,height
         $frame= new bas_frmx_gridFrame("buttons", array("POS"));
-        $frame->addComponent("group",$groups	,1,1, 1,5);
-        $frame->addComponent("item"	,$items		,1,2, 4,5);
-        $frame->addComponent("qty"	,$quantities,7,1, 5,1);
+        $frame->addComponent("group",$groups	,1,1, 1,2);
+        $frame->addComponent("item"	,$items		,1,4, 3,2);
+        $frame->addComponent("qty"	,$quantities,3,1, 4,1);
         
         $this->addFrame($frame);
         
+       
 	}
 	
 	public function OnAction($action, $data=""){
