@@ -1,0 +1,26 @@
+pannel A- Item selection.
+
+	menu:
+		charge.
+		discount.
+		delete.
+		prices.
+		lock.
+		open/close workday.
+
+	display.
+		sale Amount
+		Last item info (description, price, qty, amount).
+		Last ticket (ticket.no, charge type (cash, visa), charged Amount, owed Amount).
+		
+
+pannel B- Charge
+	
+	menu:
+		payment- visa / cash.
+		revise.
+
+	display.
+		sale Amount
+		Last item info (description, price, qty, amount).
+
