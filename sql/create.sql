@@ -8,6 +8,6 @@ source pos.sql
 select 'Loading data' as step;
 source pos.data.sql
 
-select 'Configuring imywa' as step;
-source pos.imywa.sql
+-- select 'Configuring imywa' as step;
+-- source pos.imywa.sql
 

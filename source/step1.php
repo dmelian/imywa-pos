@@ -42,18 +42,16 @@ class pos_step1 extends bas_frmx_form{
 		// id,obj,y,x,width,height
 		$frame= new bas_frmx_gridFrame("buttons", array("POS"),array('width'=>10,'height'=>8));
 		$frame->addComponent("group",$groups	,1,1, 1,7);
-		$frame->addComponent("item"	,$items		,1,2, 6,7);
+		$frame->addComponent("item"	,$items		,1,2, 7,7);
 		
-// 		$frame->addComponent("action"	,$actions,1,8, 2,4);
-		$frame->addComponent("action"	,$actions,5,8, 2,4);
-		
-		$frame->addComponent("qty"	,$quantities,8,1, 7,1);
+		$frame->addComponent("action"	,$actions,5,9, 2,4);
+		$frame->addComponent("qty"	,$quantities,8,1, 8,1);
 		
 		
 // 		$frame= new bas_frmx_gridFrame("buttons", array("POS"));
-// 		$frame->addComponent("group",$groups	,1,1, 1,2);
-// 		$frame->addComponent("item"	,$items		,1,4, 3,2);
-// 		$frame->addComponent("qty"	,$quantities,3,1, 4,1);
+// 		$frame->addComponent("group",$groups	,1,1, 1,4);
+// 		$frame->addComponent("item"	,$items		,1,2, 3,4);
+// 		$frame->addComponent("qty"	,$quantities,5,1, 4,1);
 		
 
 		$this->addFrame($frame);
