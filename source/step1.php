@@ -47,6 +47,7 @@ class pos_step1 extends bas_frmx_form{
 		$frame->addComponent("action"	,$actions,5,9, 2,4);
 		$frame->addComponent("qty"	,$quantities,8,1, 8,1);
 		
+// 		$frame->setHeader("Prueba de header");
 		
 // 		$frame= new bas_frmx_gridFrame("buttons", array("POS"));
 // 		$frame->addComponent("group",$groups	,1,1, 1,4);
