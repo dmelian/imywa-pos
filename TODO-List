@@ -1,0 +1,9 @@
+Sql Module.
+
+- Display sql errors messages in diferents languages. Use errors identifiers instead of errors messages in store procedures.
+	Use the imywa language to associate the identifiers to the final internationalizated messsage.
+	
+- Vars nomenclature.
+	ixxxx - for the input parameters to the store procedure.
+	oxxxx - for the output parameters to the store procedure.
+	myxxxx - for the local variables in the store procedure.
