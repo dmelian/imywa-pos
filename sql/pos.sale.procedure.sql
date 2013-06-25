@@ -29,11 +29,11 @@ begin
 	declare isaleNo integer;
 	declare iworkday date;
 	declare iversion integer;
+
+	select workDay into iworkday from pos where id=1;
+	select max(saleNo) into isaleNo from sale where workDay=iworkday and state='draft';
 	
-	select max(saleNo) into isaleNo from sale where workDay=iworkday;
-	select workDay into iworkday from sale where saleNo=isaleNo and state='new';
-	
-	if iworkday is null then
+	if isaleNo is null then
 		select 1 as error, 'La venta no puede eliminarse' as message;
 	else
 		update sale set state='deleted' where saleNo = isaleNo;
@@ -49,20 +49,33 @@ begin
 	declare isaleNo integer;
 	declare iworkday date;
 	declare iversion integer;
+	declare inextTicket varchar(20);
+	declare function_return varchar(50);
 	
-	select max(saleNo) into isaleNo from sale where workDay=iworkday;
-	select workDay into iworkday from sale where saleNo=isaleNo and (state='new' or state='revised');
+	select workDay into iworkday from pos where id=1;
+	select max(saleNo) into isaleNo from sale where workDay=iworkday and (state='draft' or state='revised');
 	
-	if iworkday is null then
+	
+	if isaleNo is null then
 		select 1 as error, 'La venta no puede facturarse' as message;
 	else
 		update sale set state='billed' where saleNo = isaleNo;
 		select max(version) into iversion from saleVersion where saleNo=isaleNo;
-		insert into saleVersion (workDay,saleNo,version,creationTime,reason) values (iworkday,isaleNo,iversion+1,now(),'bill');
-		select 0 as error;
-	end if;
+		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'bill',inextTicket);
+
+
 -- Generamos el nuevo ticket. Agrupamos los items y construimos las líneas de este.
-		
+		select nextSerialNumber() into inextTicket ;
+		insert into ticket(	ticketNo,workDay,creationTime,description,saleAmount,discountAmount,VATAmount,totalAmount) values (inextTicket,iworkday,now(),"ticket",0,0,0,0);
+		update saleVersion  set ticketNo = inextTicket where saleNo=isaleNo and version = iversion+1;
+
+		select create_ticketLine(inextTicket,isaleNo) into function_return;
+		if function_return = "OK" then
+			select 0 as error ,"" as message;
+		else
+			select 1 as error, function_return as message;
+		end if;
+	end if;
 end$$
 
 drop procedure if exists sale_revise$$
@@ -72,10 +85,10 @@ begin
 	declare iworkday date;
 	declare iversion integer;
 	
-	select max(saleNo) into isaleNo from sale where workDay=iworkday;
-	select workDay into iworkday from sale where saleNo=isaleNo and state='billed';
+	select workDay into iworkday from pos where id=1;
+	select max(saleNo) into isaleNo from sale where workDay=iworkday and state='billed';
 	
-	if iworkday is null then
+	if isaleNo is null then
 		select 1 as error, 'La venta no puede revisarse' as message;
 	else
 		update sale set state='revised' where saleNo = isaleNo;
@@ -93,20 +106,20 @@ begin
 	declare iversion integer;
 	declare iticket varchar(20);
 	
-	select max(saleNo) into isaleNo from sale where workDay=iworkday;
-	select workDay into iworkday from sale where saleNo=isaleNo and state='billed';
+	select workDay into iworkday from pos where id=1;
+	select max(saleNo) into isaleNo from sale where workDay=iworkday and state='billed';
 	
-	if iworkday is null then
+	if isaleNo is null then
 		select 1 as error, 'La venta no puede cobrarse' as message;
 	else
 		update sale set state='paid' where saleNo = isaleNo;
 		select max(version) into iversion from saleVersion where saleNo=isaleNo;
-		select ticket into iticket from saleVersion where saleNo=isaleNo and version=iversion;
-		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticket) values (iworkday,isaleNo,iversion+1,now(),'paid',iticket);
+		select ticketNo into iticket from saleVersion where saleNo=isaleNo and version=iversion;
+		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'paid',iticket);
 		select 0 as error;
 	end if;
 end$$
-
+	
 -- select item, sum(quantity),sum(price) from saleLine where saleNo=0 group by item having sum(quantity) > 0;
 
 

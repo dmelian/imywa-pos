@@ -1,6 +1,7 @@
 <?php
 class pos_step1 extends bas_frmx_form{
-
+	private $signo=1;
+	private $quantity = 1;
 	public function OnLoad(){
 		parent::OnLoad();
 		$this->toolbar= new bas_frmx_toolbar('close');
@@ -37,7 +38,15 @@ class pos_step1 extends bas_frmx_form{
 		}
 		
 		$actions= new bas_frmx_panelGrid("action",array('width'=>2,'height'=>3));
+		$actions->setEvent("actions_event");
+		$actions->addComponent(1,1,"cobro","Cobro");
+		$actions->addComponent(1,2,"ticket","Ticket");
 		
+		$actions->addComponent(2,1,"revisar","Revisar");
+		$actions->addComponent(2,2,"delete","Borrar");
+		
+		$actions->addComponent(3,1,"paid","Pagar");
+		$actions->addComponent(3,2,"new","nuevo");
 		
 		// id,obj,y,x,width,height
 		$frame= new bas_frmx_gridFrame("buttons", array("POS"),array('width'=>10,'height'=>8));
@@ -57,6 +66,47 @@ class pos_step1 extends bas_frmx_form{
 
 		$this->addFrame($frame);
 	}
+	
+	private function make_action($action){
+		switch ($action){
+			case 'cobro':
+				$this->call("sale_bill");
+			break;
+			
+			case 'new':
+				$this->call("sale_new");
+			break;
+			
+			case 'ticket':
+				$this->call("sale_bill");
+			break;
+			case 'revisar':
+				$this->call("sale_revise");
+			break;
+			case 'paid':
+				$this->call("sale_pay");
+			break;
+			case 'delete':
+				$this->call("sale_delete");
+			break;
+			default:
+				
+		
+		}
+	}
+	
+	private function call($action){
+		$proc = new bas_sql_myprocedure($action,array());
+		if ($proc->success){ // Elemento insertado en la venta actual.
+			// Actualizamos el display.
+					
+		}
+		else{
+			// se ha producido un error en la inserción.
+			$msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
+			echo $msg->jscommand();
+		} 
+	}
 
 	public function OnAction($action, $data=""){
 		parent::OnAction($action,$data);
@@ -67,13 +117,23 @@ class pos_step1 extends bas_frmx_form{
 				break;
 			case 'prevGrid':case 'nextGrid':
 				$this->frames[$data["idFrame"]]->OnAction($action,$data);
-// 				$this->frames[$data["idFrame"]]->OnAction($action,$data);
-				
 				$this->OnPaint("jscommand");
 				break;
 			case 'select_item': 
-				$msg= new bas_html_messageBox(false, 'Item!!',$data["item"]);
-				echo $msg->jscommand();
+// 				$msg= new bas_html_messageBox(false, 'Item!!',$data["item"]);
+// 				echo $msg->jscommand();
+				
+				$proc = new bas_sql_myprocedure('insert_item', array( $data['item'],( intval($this->quantity)*intval($this->signo) )  ));
+	
+				if ($proc->success){ // Elemento insertado en la venta actual.
+					// Actualizamos el display.
+					
+                }
+                else{
+					// se ha producido un error en la inserción.
+                    $msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
+                    echo $msg->jscommand();
+                } 
 				
 				break;
 			case 'select_group':
@@ -81,6 +141,18 @@ class pos_step1 extends bas_frmx_form{
 				$this->frames["buttons"]->getObjComponent("item")->Reload();
 				$this->OnPaint("jscommand");				
 				break;
+			case 'actions_event':
+				$this->make_action($data["item"]);
+// 				 $msg= new bas_html_messageBox(false, 'Item!!',$data["item"]);
+// 				echo $msg->jscommand();
+			break;
+			case 'num_items':
+				if ($data["item"] == "-1") $this->signo = $this->signo * -1;
+				else	$this->quantity= $data["item"];
+// 				$msg= new bas_html_messageBox(false, 'Item!!',$data["item"]);
+// 				echo $msg->jscommand();
+			break;
+			 
 		}
 	}
 }

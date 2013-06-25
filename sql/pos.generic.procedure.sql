@@ -68,7 +68,7 @@ create procedure insert_item(
 			insert into saleLine (workDay,saleNo,version,lineNo,creationTime,item,quantity,price,listPrice)
 				values (iworkday,isaleNo,iversion,ilineNo,now(),iitem,iquantity,iprice,iprice);
 			
-			select 0 as error, ilineNo as lineNo;
+			select 0 as error, "$_lineNo" as message,ilineNo as lineNo;
 		end if;
 	end if;
 end$$
