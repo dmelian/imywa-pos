@@ -127,7 +127,17 @@ class pos_step1 extends bas_frmx_form{
 	
 				if ($proc->success){ // Elemento insertado en la venta actual.
 					// Actualizamos el display.
-					
+					if ($proc->errormsg == "0") {
+						$this->frames["buttons"]->getObjComponent("item")->setAttrId($data['item'],"subItem","");
+					}
+					else{
+						$this->frames["buttons"]->getObjComponent("item")->setAttrId($data['item'],"subItem",$proc->errormsg);
+					}
+// 					$msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
+// 			echo $msg->jscommand();
+// 					$this->frames["buttons"]->getObjComponent("item")->Reload();
+				$this->OnPaint("jscommand");	
+
                 }
                 else{
 					// se ha producido un error en la inserción.

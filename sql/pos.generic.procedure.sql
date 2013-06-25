@@ -44,6 +44,7 @@ create procedure insert_item(
 	declare iversion integer;
 	declare ilineNo integer;
 	declare istate varchar(20);
+	declare iquantityAmount integer;
 	
 	select workDay into iworkday from pos;
 	
@@ -68,7 +69,9 @@ create procedure insert_item(
 			insert into saleLine (workDay,saleNo,version,lineNo,creationTime,item,quantity,price,listPrice)
 				values (iworkday,isaleNo,iversion,ilineNo,now(),iitem,iquantity,iprice,iprice);
 			
-			select 0 as error, "$_lineNo" as message,ilineNo as lineNo;
+			select sum(quantity) into iquantityAmount from saleLine where saleNo = isaleNo and item=iitem group by item;
+			
+			select 0 as error, "$_quantityAmount" as message,iquantityAmount as quantityAmount;
 		end if;
 	end if;
 end$$
