@@ -65,6 +65,9 @@ create procedure insert_item(
 				set ilineNo = ilineNo +1;
 			end if;
 			select price into iprice from item where item = iitem;
+
+-- 			update sale set saleAmount = saleAmount+(iprice*iquantity) and set owedAmount= owedAmount+(1-discountAmount)*(iprice*iquantity) where saleNo=isaleNo;
+			update sale set saleAmount = saleAmount+(iprice*iquantity) where saleNo=isaleNo;
 			
 			insert into saleLine (workDay,saleNo,version,lineNo,creationTime,item,quantity,price,listPrice)
 				values (iworkday,isaleNo,iversion,ilineNo,now(),iitem,iquantity,iprice,iprice);

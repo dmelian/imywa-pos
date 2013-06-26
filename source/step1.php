@@ -101,7 +101,7 @@ class pos_step1 extends bas_frmx_form{
 		$proc = new bas_sql_myprocedure($action,array());
 		if ($proc->success){ // Elemento insertado en la venta actual.
 			// Actualizamos el display.
-			if ($action == "sale_new") $this->curSale=$proc->errormsg;	
+			if ($action == "sale_new") $this->curSale = $proc->errormsg;	
 		}
 		else{
 			// se ha producido un error en la inserción.
@@ -123,9 +123,6 @@ class pos_step1 extends bas_frmx_form{
 	
 	private function lookupSubItems($group){
 		$qry ="select saleLine.item as item,sum(quantity) as quantity from saleLine left join item on item.item = saleLine.item where item.itemGroup='$group' and saleLine.saleNo={$this->curSale} group by item";
-		global $_LOG;
-		$_LOG->debug("Query::::",$qry);
-		$options = array();
 		$ds = new bas_sql_myqrydataset($qry);
 		$rec = $ds->reset();
 		while ($rec){ // obtenemos los periodos por factura
@@ -176,7 +173,7 @@ class pos_step1 extends bas_frmx_form{
 // 				echo $msg->jscommand();
 			break;
 			case 'num_items':
-				if ($data["item"] == "-1") $this->signo = $this->signo * -1;
+				if ($data["item"] == "-") $this->signo = $this->signo * -1;
 				else	$this->quantity= $data["item"];
 // 				$msg= new bas_html_messageBox(false, 'Item!!',$data["item"]);
 // 				echo $msg->jscommand();

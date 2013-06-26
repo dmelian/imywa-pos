@@ -34,7 +34,7 @@ create table if not exists workDay(
 create table if not exists pos(
 	id integer primary key,
 	workDay date,
-	pricesIncludeVAT boolean default false,
+	pricesIncludeVAT boolean default true,
 	VATPercentage float,
 	mainItemGroup varchar(20),
 	ticketSerialNo varchar(10),
@@ -60,9 +60,9 @@ create table if not exists ticketLine(
 	item varchar(20) not null,
 	description varchar(30),
 	quantity integer,
-	price double,
-	discountAmount double,
-	lineAmount double,
+	price double default 0,
+	discountAmount double default 0,
+	lineAmount double default 0,
 	PRIMARY KEY (ticketNo,lineNo),
 	foreign key (ticketNo) references ticket(ticketNo) on delete RESTRICT on update cascade,
 	foreign key (item) references item(item) on delete RESTRICT on update RESTRICT
