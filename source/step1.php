@@ -2,6 +2,7 @@
 class pos_step1 extends bas_frmx_form{
 	private $signo=1;
 	private $quantity = 1;
+	private $curSale;
 	public function OnLoad(){
 		parent::OnLoad();
 		$this->toolbar= new bas_frmx_toolbar('close');
@@ -37,6 +38,12 @@ class pos_step1 extends bas_frmx_form{
 			$quantities->addComponent(1,$ind,$ind-1,$ind-1);
 		}
 		
+		$qry = "select saleNo from sale where state <> 'deleted' and state <>'paid'order by saleNo DESC limit 1";
+		$dataset= new bas_sql_myquery($qry);
+		
+		$this->curSale = $dataset->result['saleNo'];
+		
+		
 		$actions= new bas_frmx_panelGrid("action",array('width'=>2,'height'=>3));
 		$actions->setEvent("actions_event");
 		$actions->addComponent(1,1,"cobro","Cobro");
@@ -58,13 +65,8 @@ class pos_step1 extends bas_frmx_form{
 		
 // 		$frame->setHeader("Prueba de header");
 		
-// 		$frame= new bas_frmx_gridFrame("buttons", array("POS"));
-// 		$frame->addComponent("group",$groups	,1,1, 1,4);
-// 		$frame->addComponent("item"	,$items		,1,2, 3,4);
-// 		$frame->addComponent("qty"	,$quantities,5,1, 4,1);
-		
-
 		$this->addFrame($frame);
+		if ($this->curSale != null)$this->lookupSubItems('g2');
 	}
 	
 	private function make_action($action){
@@ -99,13 +101,38 @@ class pos_step1 extends bas_frmx_form{
 		$proc = new bas_sql_myprocedure($action,array());
 		if ($proc->success){ // Elemento insertado en la venta actual.
 			// Actualizamos el display.
-					
+			if ($action == "sale_new") $this->curSale=$proc->errormsg;	
 		}
 		else{
 			// se ha producido un error en la inserción.
 			$msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
 			echo $msg->jscommand();
 		} 
+	}
+	
+	private function pushSubItems($item,$value){
+		
+		if ($value == "0") {
+			$this->frames["buttons"]->getObjComponent("item")->setAttrId($item,"subItem","");
+		}
+		else{
+			$this->frames["buttons"]->getObjComponent("item")->setAttrId($item,"subItem",$value);
+		}
+	}
+	
+	
+	private function lookupSubItems($group){
+		$qry ="select saleLine.item as item,sum(quantity) as quantity from saleLine left join item on item.item = saleLine.item where item.itemGroup='$group' and saleLine.saleNo={$this->curSale} group by item";
+		global $_LOG;
+		$_LOG->debug("Query::::",$qry);
+		$options = array();
+		$ds = new bas_sql_myqrydataset($qry);
+		$rec = $ds->reset();
+		while ($rec){ // obtenemos los periodos por factura
+			$this->pushSubItems( $rec["item"], $rec["quantity"]);
+			$rec = $ds->next();			
+		}	
+		$ds->close();
 	}
 
 	public function OnAction($action, $data=""){
@@ -127,17 +154,8 @@ class pos_step1 extends bas_frmx_form{
 	
 				if ($proc->success){ // Elemento insertado en la venta actual.
 					// Actualizamos el display.
-					if ($proc->errormsg == "0") {
-						$this->frames["buttons"]->getObjComponent("item")->setAttrId($data['item'],"subItem","");
-					}
-					else{
-						$this->frames["buttons"]->getObjComponent("item")->setAttrId($data['item'],"subItem",$proc->errormsg);
-					}
-// 					$msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
-// 			echo $msg->jscommand();
-// 					$this->frames["buttons"]->getObjComponent("item")->Reload();
-				$this->OnPaint("jscommand");	
-
+					$this->pushSubItems($data['item'],$proc->errormsg);
+					$this->OnPaint("jscommand");	
                 }
                 else{
 					// se ha producido un error en la inserción.
@@ -149,7 +167,8 @@ class pos_step1 extends bas_frmx_form{
 			case 'select_group':
 				$this->frames["buttons"]->getObjComponent("item")->query->setfilter($data["item"],"itemGroup");
 				$this->frames["buttons"]->getObjComponent("item")->Reload();
-				$this->OnPaint("jscommand");				
+				$this->lookupSubItems($data["item"]);
+				$this->OnPaint("jscommand");
 				break;
 			case 'actions_event':
 				$this->make_action($data["item"]);
