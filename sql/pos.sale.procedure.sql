@@ -50,6 +50,7 @@ begin
 	declare iworkday date;
 	declare iversion integer;
 	declare inextTicket varchar(20);
+	declare iVATpercentage float;
 	declare function_return varchar(50);
 	
 	select workDay into iworkday from pos where id=1;
@@ -63,7 +64,8 @@ begin
 		
 		-- Generamos el nuevo ticket. Agrupamos los items y construimos las líneas de este.
 		select nextSerialNumber() into inextTicket ;
-		insert into ticket(	ticketNo,workDay,creationTime,description,saleAmount,discountAmount,VATAmount,totalAmount) values (inextTicket,iworkday,now(),"ticket",0,0,0,0);
+		select pricesIncludeVAT*VATPercentage into iVATpercentage from pos where id=1;
+		insert into ticket(	ticketNo,workDay,creationTime,description,saleAmount,discountAmount,VATAmount,totalAmount) select inextTicket,iworkday,now(),"ticket",saleAmount,discountAmount,(saleAmount-discountAmount)*iVATpercentage,(saleAmount-discountAmount)*(1+iVATpercentage) from sale where saleNo = isaleNo ;
 		
 		select max(version) into iversion from saleVersion where saleNo=isaleNo;
 		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'bill',inextTicket);
@@ -79,38 +81,6 @@ begin
 		end if;
 	end if;
 end$$
-
-
-
-
-
-create table if not exists ticket(
-	ticketNo varchar(20) not null primary key,
-	workDay date,
-	creationTime datetime,
-	description varchar(30),
-	saleAmount double default 0,
-	discountAmount double default 0,
-	VATAmount double default 0,
-	totalAmount double default 0,
-	foreign key (workDay) references workDay(workDay) on delete RESTRICT on update cascade
-) engine InnoDB, default character set utf8;
-
-create table if not exists ticketLine(
-	ticketNo varchar(20) not null,
-	lineNo integer not null,
-	item varchar(20) not null,
-	description varchar(30),
-	quantity integer,
-	price double default 0,
-	discountAmount double default 0,
-	lineAmount double default 0,
-	PRIMARY KEY (ticketNo,lineNo),
-	foreign key (ticketNo) references ticket(ticketNo) on delete RESTRICT on update cascade,
-	foreign key (item) references item(item) on delete RESTRICT on update RESTRICT
-	
-) engine InnoDB, default character set utf8;
-
 
 drop procedure if exists sale_revise$$
 create procedure sale_revise()
