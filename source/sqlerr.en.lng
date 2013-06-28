@@ -1,0 +1,7 @@
+
+[generic]
+
+err01	The work day $_workday is opened
+err02	The work day $_workday is not opened
+err03	There isn't a opened work day
+err04	The sale can not be modified
