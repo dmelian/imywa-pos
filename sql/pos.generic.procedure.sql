@@ -13,7 +13,7 @@ begin
 		
 		select 0 as error;
 	else
-		select 1 as error, 'El día ya se encuentra abierto' as message;
+		select 1 as error, 'El día ya se encuentra abierto' as message, 'generic_err01' as idMessage, iworkday as workday;
 	end if;
 end$$
 
@@ -24,7 +24,7 @@ begin
 	select workDay into iworkday from pos;
 	
 	if iworkday is null then
-		select 1 as error, 'El día no se encuentra abierto' as message;
+		select 1 as error, 'El día no se encuentra abierto' as message, 'generic_err02' as idMessage, iworkday as workday;
 	else
 		update workDay set closing=now() where workDay=iworkday;
 		update pos set workDay=null where id=1;
@@ -49,13 +49,13 @@ create procedure insert_item(
 	select workDay into iworkday from pos;
 	
 	if iworkday is null then
-		select 1 as error, 'No ha realizado la apertura del día' as message;
+		select 1 as error, 'No ha realizado la apertura del día' as message, 'generic_err03' as idMessage;
 	else
 		select max(saleNo) into isaleNo from sale where workDay=iworkday;
 		select state into istate from sale where workDay=iworkday and saleNo = isaleNo and (state='draft' or state='revised');
 		
 		if istate is null then
-			select 1 as error, 'La venta no puede modificarse' as message;
+			select 1 as error, 'La venta no puede modificarse' as message, 'generic_err04' as idMessage;
 		else
 			select max(version) into iversion from saleVersion where saleNo = isaleNo and workDay = iworkday;
 			select max(lineNo) into ilineNo from saleLine where saleNo = isaleNo and workDay = iworkday and version = iversion;

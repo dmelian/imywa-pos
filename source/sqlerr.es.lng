@@ -1,0 +1,7 @@
+
+[generic]
+
+err01	El día $_workday ya se encuentra abierto
+err02	El día $_workday no se encuentra abierto
+err03	No ha realizado la apertura del día
+err04	La venta no puede modificarse
