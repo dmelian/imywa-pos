@@ -15,7 +15,7 @@ class pos_step1 extends bas_frmx_form{
 		$groups->query->addcol("item","I","item");
 		$groups->query->addcol("itemGroup", "G");
 		$groups->query->setFilter('main');
-		$groups->classMain="item";
+		$groups->mainField="item";
 		$groups->setEvent("select_group");
 		$groups->setRecord();
 
@@ -24,7 +24,7 @@ class pos_step1 extends bas_frmx_form{
 		$items->query->addcol("item","I","item");
 		$items->query->addcol("itemGroup", "G");
 		$items->query->setFilter('g2');
-		$items->classMain="item";
+		$items->mainField="item";
 		$items->setEvent("select_item");
 		$items->setRecord();
 
