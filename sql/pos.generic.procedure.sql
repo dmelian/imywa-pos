@@ -45,6 +45,7 @@ create procedure insert_item(
 	declare ilineNo integer;
 	declare istate varchar(20);
 	declare iquantityAmount integer;
+	declare idiscountAmount double;
 	
 	select workDay into iworkday from pos;
 	
@@ -66,7 +67,7 @@ create procedure insert_item(
 			end if;
 			select price into iprice from item where item = iitem;
 
--- 			update sale set saleAmount = saleAmount+(iprice*iquantity) and set owedAmount= owedAmount+(1-discountAmount)*(iprice*iquantity) where saleNo=isaleNo;
+-- 			update sale set saleAmount = saleAmount+(iprice*iquantity) and discountAmount= discountAmount+ *idiscountAmount+(iprice*iquantity)where saleNo=isaleNo;
 			update sale set saleAmount = saleAmount+(iprice*iquantity) where saleNo=isaleNo;
 			
 			insert into saleLine (workDay,saleNo,version,lineNo,creationTime,item,quantity,price,listPrice)

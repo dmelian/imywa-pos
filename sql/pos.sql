@@ -79,6 +79,7 @@ create table if not exists sale(
 	saleAmount double default 0,
 	chargedAmount double default 0,
 	owedAmount double default 0,
+	typePayment enum ('cash','creditCard'),
 	primary key (workDay,saleNo),
 	foreign key (workDay) references workDay(workDay) on delete RESTRICT on update cascade
 ) engine InnoDB, default character set utf8;

@@ -1,8 +1,10 @@
 delimiter $$
 DROP function IF EXISTS create_ticketLine$$
 create function create_ticketLine(
-    inumberTicket varchar(20),isale int
-    )
+	inumberTicket varchar(20),
+	isale int,
+	ipositive int
+)
     returns varchar(50)
 begin
     declare iquantiy int;
@@ -22,7 +24,7 @@ begin
 
 --     select isale ;
 --     select inumberTicket ;
-    select reason into ireason from saleVersion where saleNo=isale and reason='bill' and ticketNo =inumberTicket order by version DESC limit 1;
+    select reason into ireason from saleVersion where saleNo=isale and (reason='bill' or reason='revise' or reason='annull') and ticketNo =inumberTicket order by version DESC limit 1;
 
     if ireason is not null then
 		set iexit = 'OK';
@@ -34,7 +36,7 @@ begin
 			set endds = notfound;
 
 			if not endds then
-				insert into ticketLine (ticketNo,lineNo,item,quantity,price,lineAmount) values (inumberTicket,icount,iitem,iquantiy,iprice,iquantiy*iprice);
+				insert into ticketLine (ticketNo,lineNo,item,quantity,price,lineAmount) values (inumberTicket,icount,iitem,iquantiy*ipositive,iprice,ipositive*iquantiy*iprice);
 				set icount = icount +1;
 			end if;
 

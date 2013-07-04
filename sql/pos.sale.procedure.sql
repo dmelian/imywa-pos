@@ -19,7 +19,7 @@ begin
 		insert into sale (workDay,saleNo,state) values (iworkday,isaleNo,'draft');
 		insert into saleVersion (workDay,saleNo,version,creationTime,reason) values (iworkday,isaleNo,1,now(),'new');
 		
-		select 0 as error, isaleNo as saleNo;
+		select 0 as error, "$_saleNo" as message,isaleNo as saleNo;
 	end if;
 end$$
 
@@ -60,7 +60,7 @@ begin
 	if isaleNo is null then
 		select 1 as error, 'La venta no puede facturarse' as message;
 	else
-		update sale set state='billed' where saleNo = isaleNo;
+		update sale set state='billed' , discountAmount=discount*saleAmount where saleNo = isaleNo;
 		
 		-- Generamos el nuevo ticket. Agrupamos los items y construimos las líneas de este.
 		select nextSerialNumber() into inextTicket ;
@@ -71,11 +71,11 @@ begin
 		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'bill',inextTicket);
 
 -- 		Creamos las lineas del ticket.		
-		select create_ticketLine(inextTicket,isaleNo) into function_return;
+		select create_ticketLine(inextTicket,isaleNo,1) into function_return;
 		
 -- 		Comprobamos que se ha realizado correctamente.
 		if function_return = "OK" then
-			select 0 as error ,"" as message;
+			select 0 as error ,"$_ticketNo" as message, inextTicket as ticketNo;
 		else
 			select 1 as error, function_return as message;
 		end if;
@@ -88,6 +88,9 @@ begin
 	declare isaleNo integer;
 	declare iworkday date;
 	declare iversion integer;
+	declare inextTicket varchar(20);
+	declare function_return varchar(50);
+	declare iVATpercentage float;
 	
 	select workDay into iworkday from pos where id=1;
 	select max(saleNo) into isaleNo from sale where workDay=iworkday and state='billed';
@@ -96,19 +99,39 @@ begin
 		select 1 as error, 'La venta no puede revisarse' as message;
 	else
 		update sale set state='revised' where saleNo = isaleNo;
+		select pricesIncludeVAT*VATPercentage into iVATpercentage from pos where id=1;
+		
+		select nextSerialNumber() into inextTicket ;
+		insert into ticket(	ticketNo,workDay,creationTime,description,saleAmount,discountAmount,VATAmount,totalAmount) select inextTicket,iworkday,now(),"ticket inverso.Revision",-1*saleAmount,discountAmount,-1*(saleAmount-discountAmount)*iVATpercentage,-1*(saleAmount-discountAmount)*(1+iVATpercentage) from sale where saleNo = isaleNo ;
+
+		
 		select max(version) into iversion from saleVersion where saleNo=isaleNo;
-		insert into saleVersion (workDay,saleNo,version,creationTime,reason) values (iworkday,isaleNo,iversion+1,now(),'revise');
-		select 0 as error;
+		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'revise',inextTicket);
+		
+-- 		Creamos las lineas del ticket inverso.
+		select create_ticketLine(inextTicket,isaleNo,-1) into function_return;
+		
+-- 		Comprobamos que se ha realizado correctamente.
+		if function_return = "OK" then
+			select 0 as error ,"" as message;
+		else
+			select 1 as error, function_return as message;
+		end if;		
 	end if;
 end$$
 
 drop procedure if exists sale_pay$$
-create procedure sale_pay()
+create procedure sale_pay(
+	in itypePayment enum ('cash','creditCard'),
+	in ichargedAmount double
+)
 begin
 	declare isaleNo integer;
 	declare iworkday date;
 	declare iversion integer;
 	declare iticket varchar(20);
+	declare iowedAmount double;
+	declare itotalSale double;
 	
 	select workDay into iworkday from pos where id=1;
 	select max(saleNo) into isaleNo from sale where workDay=iworkday and state='billed';
@@ -116,12 +139,28 @@ begin
 	if isaleNo is null then
 		select 1 as error, 'La venta no puede cobrarse' as message;
 	else
-		update sale set state='paid' where saleNo = isaleNo;
 		select max(version) into iversion from saleVersion where saleNo=isaleNo;
 		select ticketNo into iticket from saleVersion where saleNo=isaleNo and version=iversion;
+		select totalAmount into itotalSale from ticket where ticketNo=iticket;
+
+		if ichargedAmount is null then
+-- 			select saleAmount into ichargedAmount from sale where workDay=iworkday and saleNo=isaleNo;
+			set ichargedAmount = itotalSale;
+		end if;
+		
+		update sale set state='paid' , chargedAmount=ichargedAmount , owedAmount=(ichargedAmount-itotalSale) , typePayment= itypePayment where saleNo = isaleNo;
+
 		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'paid',iticket);
-		select 0 as error;
+		
+		select owedAmount into iowedAmount from sale where workDay=iworkday and saleNo=isaleNo;
+		
+		if iowedAmount < 0 then
+			select 1 as error, 'El importe entregado es menor al total' as message;
+		else
+			select 0 as error,"$_owedAmount" as message,iowedAmount as owedAmount;
+		end if;
 	end if;
+	
 end$$
 	
 -- select item, sum(quantity),sum(price) from saleLine where saleNo=0 group by item having sum(quantity) > 0;

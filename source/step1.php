@@ -3,30 +3,42 @@ class pos_step1 extends bas_frmx_form{
 	private $signo=1;
 	private $quantity = 1;
 	private $curSale;
+	private $currentApp;
+	private $lastItems=array();
+	
 	public function OnLoad(){
 		parent::OnLoad();
+
+		global $_SESSION;
+		$this->currentApp = $_SESSION->currentApp;
+		
 		$this->toolbar= new bas_frmx_toolbar('close');
 		$this->title= 'The estheticien';
 
 		$this->buttonbar = new bas_frmx_buttonbar();
 
 		$groups= new bas_frmx_panelGridQuery("group",array('width'=>1,'height'=>5));
-		$groups->query->add("item");
-		$groups->query->addcol("item","I","item");
-		$groups->query->addcol("itemGroup", "G");
-		$groups->query->setFilter('main');
+// 		$groups->query->add("item");
+// 		$groups->query->addcol("item","I","item");
+// 		$groups->query->addcol("itemGroup", "G");
+// 		$groups->query->setFilter('main');
+		
 		$groups->mainField="item";
+		$groups->setQuery($this->buildQuery(array("itemGroup"=>"main")));
 		$groups->setEvent("select_group");
-		$groups->setRecord();
+// 		$groups->setRecord();
 
 		$items= new bas_frmx_panelGridQuery("item",array('width'=>4,'height'=>5));
-		$items->query->add("item");
-		$items->query->addcol("item","I","item");
-		$items->query->addcol("itemGroup", "G");
-		$items->query->setFilter('g2');
+// 		$items->query->add("item");
+// 		$items->query->addcol("item","I","item");
+// 		$items->query->addcol("itemGroup", "G");
+// 		$items->query->setFilter('g2');
+		
+		
 		$items->mainField="item";
+		$items->setQuery($this->buildQuery(array("itemGroup"=>"g2")));
 		$items->setEvent("select_item");
-		$items->setRecord();
+// 		$items->setRecord();
 
 		$quantities= new bas_frmx_panelGrid("items",array('width'=>10,'height'=>1));
 		$quantities->setEvent("num_items");
@@ -69,6 +81,17 @@ class pos_step1 extends bas_frmx_form{
 		if ($this->curSale != null)$this->lookupSubItems('g2');
 	}
 	
+	private function buildQuery($filter){
+		$query = new bas_sqlx_querydef();
+		$query->add("item");
+		$query->addcol("item","I","item");
+		$query->addcol("itemGroup", "G");
+		
+		$query->setfilterRecord($filter);
+		
+		return $query;
+	}
+	
 	private function make_action($action){
 		switch ($action){
 			case 'cobro':
@@ -86,7 +109,7 @@ class pos_step1 extends bas_frmx_form{
 				$this->call("sale_revise");
 			break;
 			case 'paid':
-				$this->call("sale_pay");
+				$this->call("sale_pay",array("cash",500));
 			break;
 			case 'delete':
 				$this->call("sale_delete");
@@ -97,11 +120,24 @@ class pos_step1 extends bas_frmx_form{
 		}
 	}
 	
-	private function call($action){
-		$proc = new bas_sql_myprocedure($action,array());
+	private function OnRefreshDashBoard(){
+		global $_LOG;
+		$_LOG->log("###  Venta ACtual:: {$this->curSale}");
+		
+		foreach ($this->lastItems as $item){
+			$_LOG->log("###  Último item:: {$item["item"]}.  Cantidad:: {$item["quantity"]}");
+		}
+		
+	
+	}
+	
+	private function call($action, $value=array()){
+		$proc = new bas_sql_myprocedure($action,$value);
 		if ($proc->success){ // Elemento insertado en la venta actual.
 			// Actualizamos el display.
-			if ($action == "sale_new") $this->curSale = $proc->errormsg;	
+			if ($action == "sale_new") 
+			return $this->curSale = $proc->errormsg;	
+			
 		}
 		else{
 			// se ha producido un error en la inserción.
@@ -152,18 +188,20 @@ class pos_step1 extends bas_frmx_form{
 				if ($proc->success){ // Elemento insertado en la venta actual.
 					// Actualizamos el display.
 					$this->pushSubItems($data['item'],$proc->errormsg);
-					$this->OnPaint("jscommand");	
+					$this->OnPaint("jscommand");
+					$this->lastItems[] = array("item"=>$data['item'],"quantity"=>intval(($this->quantity)*intval($this->signo)) );
                 }
                 else{
 					// se ha producido un error en la inserción.
                     $msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
                     echo $msg->jscommand();
-                } 
-				
+                }               
+			
 				break;
 			case 'select_group':
-				$this->frames["buttons"]->getObjComponent("item")->query->setfilter($data["item"],"itemGroup");
-				$this->frames["buttons"]->getObjComponent("item")->Reload();
+// 				$this->frames["buttons"]->getObjComponent("item")->query->setfilter($data["item"],"itemGroup");
+// 				$this->frames["buttons"]->getObjComponent("item")->Reload();
+				$this->frames["buttons"]->getObjComponent("item")->setQuery($this->buildQuery(array("itemGroup"=>$data["item"])));
 				$this->lookupSubItems($data["item"]);
 				$this->OnPaint("jscommand");
 				break;
@@ -180,5 +218,6 @@ class pos_step1 extends bas_frmx_form{
 			break;
 			 
 		}
+		$this->OnRefreshDashBoard();
 	}
 }
