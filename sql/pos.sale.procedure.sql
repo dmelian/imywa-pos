@@ -17,7 +17,7 @@ begin
 			set isaleNo = isaleNo +1;
 		end if;
 		insert into sale (workDay,saleNo,state) values (iworkday,isaleNo,'draft');
-		insert into saleVersion (workDay,saleNo,version,creationTime,reason) values (iworkday,isaleNo,1,now(),'new');
+		insert into saleVersion (workDay,saleNo,version,creationTime,action) values (iworkday,isaleNo,1,now(),'new');
 		
 		select 0 as error, "$_saleNo" as message,isaleNo as saleNo;
 	end if;
@@ -38,7 +38,7 @@ begin
 	else
 		update sale set state='deleted' where saleNo = isaleNo;
 		select max(version) into iversion from saleVersion where saleNo=isaleNo;
-		insert into saleVersion (workDay,saleNo,version,creationTime,reason) values (iworkday,isaleNo,iversion+1,now(),'delete');
+		insert into saleVersion (workDay,saleNo,version,creationTime,action) values (iworkday,isaleNo,iversion+1,now(),'delete');
 		select 0 as error;
 	end if;
 end$$
@@ -60,15 +60,15 @@ begin
 	if isaleNo is null then
 		select 1 as error, 'La venta no puede facturarse' as message;
 	else
-		update sale set state='billed' , discountAmount=discount*saleAmount where saleNo = isaleNo;
+		update sale set state='billed' , discountAmount=round(discount*saleAmount,2) where saleNo = isaleNo;
 		
 		-- Generamos el nuevo ticket. Agrupamos los items y construimos las líneas de este.
 		select nextSerialNumber() into inextTicket ;
 		select pricesIncludeVAT*VATPercentage into iVATpercentage from pos where id=1;
-		insert into ticket(	ticketNo,workDay,creationTime,description,saleAmount,discountAmount,VATAmount,totalAmount) select inextTicket,iworkday,now(),"ticket",saleAmount,discountAmount,(saleAmount-discountAmount)*iVATpercentage,(saleAmount-discountAmount)*(1+iVATpercentage) from sale where saleNo = isaleNo ;
+		insert into ticket(	ticketNo,workDay,creationTime,description,saleAmount,discountAmount,VATAmount,totalAmount) select inextTicket,iworkday,now(),"ticket",saleAmount,discountAmount,round((saleAmount-discountAmount)*iVATpercentage,2),round((saleAmount-discountAmount)*(1+iVATpercentage),2) from sale where saleNo = isaleNo ;
 		
 		select max(version) into iversion from saleVersion where saleNo=isaleNo;
-		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'bill',inextTicket);
+		insert into saleVersion (workDay,saleNo,version,creationTime,action,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'bill',inextTicket);
 
 -- 		Creamos las lineas del ticket.		
 		select create_ticketLine(inextTicket,isaleNo,1) into function_return;
@@ -102,18 +102,18 @@ begin
 		select pricesIncludeVAT*VATPercentage into iVATpercentage from pos where id=1;
 		
 		select nextSerialNumber() into inextTicket ;
-		insert into ticket(	ticketNo,workDay,creationTime,description,saleAmount,discountAmount,VATAmount,totalAmount) select inextTicket,iworkday,now(),"ticket inverso.Revision",-1*saleAmount,discountAmount,-1*(saleAmount-discountAmount)*iVATpercentage,-1*(saleAmount-discountAmount)*(1+iVATpercentage) from sale where saleNo = isaleNo ;
+		insert into ticket(	ticketNo,workDay,creationTime,description,saleAmount,discountAmount,VATAmount,totalAmount) select inextTicket,iworkday,now(),"ticket inverso.Revision",-1*saleAmount,discountAmount,-1*round((saleAmount-discountAmount)*iVATpercentage,2),-1*round((saleAmount-discountAmount)*(1+iVATpercentage),2) from sale where saleNo = isaleNo ;
 
 		
 		select max(version) into iversion from saleVersion where saleNo=isaleNo;
-		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'revise',inextTicket);
+		insert into saleVersion (workDay,saleNo,version,creationTime,action,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'revise',inextTicket);
 		
 -- 		Creamos las lineas del ticket inverso.
 		select create_ticketLine(inextTicket,isaleNo,-1) into function_return;
 		
 -- 		Comprobamos que se ha realizado correctamente.
 		if function_return = "OK" then
-			select 0 as error ,"" as message;
+			select 0 as error ,"$_ticketNo" as message, inextTicket as ticketNo;
 		else
 			select 1 as error, function_return as message;
 		end if;		
@@ -148,9 +148,9 @@ begin
 			set ichargedAmount = itotalSale;
 		end if;
 		
-		update sale set state='paid' , chargedAmount=ichargedAmount , owedAmount=(ichargedAmount-itotalSale) , typePayment= itypePayment where saleNo = isaleNo;
+		update sale set state='paid' , chargedAmount=ichargedAmount , owedAmount= round(ichargedAmount-itotalSale,2) , typePayment= itypePayment where saleNo = isaleNo;
 
-		insert into saleVersion (workDay,saleNo,version,creationTime,reason,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'paid',iticket);
+		insert into saleVersion (workDay,saleNo,version,creationTime,action,ticketNo) values (iworkday,isaleNo,iversion+1,now(),'paid',iticket);
 		
 		select owedAmount into iowedAmount from sale where workDay=iworkday and saleNo=isaleNo;
 		
@@ -159,10 +159,52 @@ begin
 		else
 			select 0 as error,"$_owedAmount" as message,iowedAmount as owedAmount;
 		end if;
+		
 	end if;
 	
 end$$
+
+
+drop procedure if exists sale_annull$$
+create procedure sale_annull(
+	in ireason varchar(15)
+	)
+begin
+	declare isaleNo integer;
+	declare iworkday date;
+	declare iversion integer;
+	declare inextTicket varchar(20);
+	declare function_return varchar(50);
 	
+	select workDay into iworkday from pos where id=1;
+	select max(saleNo) into isaleNo from sale where workDay=iworkday and state='paid';
+	
+	if isaleNo is null then
+		select 1 as error, 'La venta no puede anularse' as message;
+	else
+		select max(version) into iversion from saleVersion where saleNo=isaleNo;
+		update sale set state='anulled' where saleNo = isaleNo;
+		
+		select nextSerialNumber() into inextTicket ;
+		insert into ticket(ticketNo,workDay,creationTime,description,saleAmount,discountAmount,VATAmount,totalAmount) select inextTicket,iworkday,now(),"ticket inverso.Anulacion",-1*saleAmount,discountAmount,-1*round((saleAmount-discountAmount)*iVATpercentage,2),-1*round((saleAmount-discountAmount)*(1+iVATpercentage),2) from sale where saleNo = isaleNo ;
+
+		
+		select max(version) into iversion from saleVersion where saleNo=isaleNo;
+		insert into saleVersion (workDay,saleNo,version,creationTime,action,ticketNo,reason) values (iworkday,isaleNo,iversion+1,now(),'annul',inextTicket,ireason);
+		
+-- 		Creamos las lineas del ticket inverso.
+		select create_ticketLine(inextTicket,isaleNo,-1) into function_return;
+		
+-- 		Comprobamos que se ha realizado correctamente.
+		if function_return = "OK" then
+			select 0 as error ,"$_ticketNo" as message, inextTicket as ticketNo;
+		else
+			select 1 as error, function_return as message;
+		end if;
+	end if;
+	
+end$$
+
 -- select item, sum(quantity),sum(price) from saleLine where saleNo=0 group by item having sum(quantity) > 0;
 
 

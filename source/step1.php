@@ -5,6 +5,7 @@ class pos_step1 extends bas_frmx_form{
 	private $curSale;
 	private $currentApp;
 	private $lastItems=array();
+	private $lastTicket;
 	
 	public function OnLoad(){
 		parent::OnLoad();
@@ -81,6 +82,8 @@ class pos_step1 extends bas_frmx_form{
 		if ($this->curSale != null)$this->lookupSubItems('g2');
 	}
 	
+	
+	
 	private function buildQuery($filter){
 		$query = new bas_sqlx_querydef();
 		$query->add("item");
@@ -95,7 +98,11 @@ class pos_step1 extends bas_frmx_form{
 	private function make_action($action){
 		switch ($action){
 			case 'cobro':
-				$this->call("sale_bill");
+				$out = $this->call("sale_bill");
+				if ($out != "error") {
+					$this->lastTicket = $out;
+					$this->printTicket();
+				}
 			break;
 			
 			case 'new':
@@ -103,10 +110,18 @@ class pos_step1 extends bas_frmx_form{
 			break;
 			
 			case 'ticket':
-				$this->call("sale_bill");
+				$out = $this->call("sale_bill");
+				if ($out != "error") {
+					$this->lastTicket = $out;
+					$this->printTicket();
+				}
 			break;
 			case 'revisar':
-				$this->call("sale_revise");
+				$out = $this->call("sale_revise");
+				if ($out != "error") {
+					$this->lastTicket = $out;
+					$this->printTicket();
+				}
 			break;
 			case 'paid':
 				$this->call("sale_pay",array("cash",500));
@@ -135,14 +150,14 @@ class pos_step1 extends bas_frmx_form{
 		$proc = new bas_sql_myprocedure($action,$value);
 		if ($proc->success){ // Elemento insertado en la venta actual.
 			// Actualizamos el display.
-			if ($action == "sale_new") 
-			return $this->curSale = $proc->errormsg;	
+			return $proc->errormsg;
 			
 		}
 		else{
 			// se ha producido un error en la inserción.
 			$msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
 			echo $msg->jscommand();
+			return "error";
 		} 
 	}
 	
@@ -156,6 +171,40 @@ class pos_step1 extends bas_frmx_form{
 		}
 	}
 	
+	
+	private function printTicket(){
+		$ticket = array();
+
+// 		$qry ="select item,description, concat(quantity,'x',price) as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
+		$qry ="select item, concat(quantity,'x',price) as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";		
+		$ds = new bas_sql_myqrydataset($qry);
+		$rec = $ds->reset();
+		while ($rec){ // obtenemos los periodos por factura
+			$ticket[] = $rec;
+			$rec = $ds->next();			
+		}	
+		$ds->close();
+		
+		
+		global $_LOG;
+		$_LOG->debug("Valor del ticket",$ticket);
+		
+		$printer = new pos_ticketPrinter();
+		$header[] = array("item"=>"Producto","quantity"=>"Cantidad","lineAmount"=>"Total");
+		$printer->insertBlocK("header",$header);
+		$printer->configBlock("header","item",1);
+		$printer->configBlock("header","quantity",2);
+		$printer->configBlock("header","lineAmount",3);
+		
+		$printer->insertBlocK("ticket",$ticket);
+		$printer->configBlock("ticket","item",1);
+		$printer->configBlock("ticket","quantity",2);
+		$printer->configBlock("ticket","lineAmount",3);
+		
+		$printer->printTicket();
+// 		$printer->configBlock("ticket","item",4);
+		
+	}
 	
 	private function lookupSubItems($group){
 		$qry ="select saleLine.item as item,sum(quantity) as quantity from saleLine left join item on item.item = saleLine.item where item.itemGroup='$group' and saleLine.saleNo={$this->curSale} group by item";

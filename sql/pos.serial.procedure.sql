@@ -10,7 +10,7 @@ begin
     declare iquantiy int;
     declare iprice double;
     declare iitem varchar(20); 
-    declare ireason varchar(10);
+    declare iaction varchar(10);
     declare iexit varchar(50);
     declare icount int;
     
@@ -24,9 +24,9 @@ begin
 
 --     select isale ;
 --     select inumberTicket ;
-    select reason into ireason from saleVersion where saleNo=isale and (reason='bill' or reason='revise' or reason='annull') and ticketNo =inumberTicket order by version DESC limit 1;
+    select action into iaction from saleVersion where saleNo=isale and (action='bill' or action='revise' or action='annull') and ticketNo =inumberTicket order by version DESC limit 1;
 
-    if ireason is not null then
+    if iaction is not null then
 		set iexit = 'OK';
 		set icount = 1;
 		open ds;

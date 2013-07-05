@@ -84,14 +84,22 @@ create table if not exists sale(
 	foreign key (workDay) references workDay(workDay) on delete RESTRICT on update cascade
 ) engine InnoDB, default character set utf8;
 
+create table if not exists typeReason(
+	reason integer AUTO_INCREMENT,
+	description varchar(50),
+	primary key (reason)
+) engine InnoDB, default character set utf8;
+
 create table if not exists saleVersion(
 	saleNo integer not null,
 	workDay date,
 	version integer not null,
 	creationTime datetime,
-	reason enum('new','delete','bill','revise','paid'),
+	action enum('new','delete','bill','revise','paid'),
+	reason integer,
 	ticketNo varchar(20),
 	primary key (saleNo,workDay,version),
+	foreign key (reason) references typeReason(reason) on delete RESTRICT on update cascade,
 	foreign key (workDay,saleNo) references sale(workDay,saleNo) on delete RESTRICT on update cascade,
 	foreign key (ticketNo) references ticket(ticketNo) on delete RESTRICT on update cascade
 ) engine InnoDB, default character set utf8;
@@ -110,3 +118,5 @@ create table if not exists saleLine(
 	foreign key (saleNo,workDay,version) references saleVersion(saleNo,workDay,version) on delete RESTRICT on update cascade,
 	foreign key (item) references item(item) on delete RESTRICT on update RESTRICT
 ) engine InnoDB, default character set utf8;
+
+
