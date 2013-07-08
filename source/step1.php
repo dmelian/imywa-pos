@@ -56,7 +56,6 @@ class pos_step1 extends bas_frmx_form{
 		
 		$this->curSale = $dataset->result['saleNo'];
 		
-		
 		$actions= new bas_frmx_panelGrid("action",array('width'=>2,'height'=>3));
 		$actions->setEvent("actions_event");
 		$actions->addComponent(1,1,"cobro","Cobro");
@@ -106,7 +105,10 @@ class pos_step1 extends bas_frmx_form{
 			break;
 			
 			case 'new':
-				$this->call("sale_new");
+				$out = $this->call("sale_new");
+				if ($out != "error") {
+					$this->curSale = $out;
+				}
 			break;
 			
 			case 'ticket':
@@ -192,19 +194,26 @@ class pos_step1 extends bas_frmx_form{
 		$printer = new pos_ticketPrinter();
 		$header[] = array("item"=>"Producto","quantity"=>"Cantidad","lineAmount"=>"Total");
 		$printer->insertBlocK("header",$header);
-		$printer->configBlock("header","item",1);
-		$printer->configBlock("header","quantity",2);
-		$printer->configBlock("header","lineAmount",3);
+		$printer->configBlock("header","item",1,1,12);
+		$printer->configBlock("header","quantity",2,1,8);
+		$printer->configBlock("header","lineAmount",3,1,11);
 		
 		$printer->insertBlocK("ticket",$ticket);
-		$printer->configBlock("ticket","item",1);
-		$printer->configBlock("ticket","quantity",2);
-		$printer->configBlock("ticket","lineAmount",3);
+		$printer->configBlock("ticket","item",1,1,12);		
+		$printer->configBlock("ticket","lineAmount",3,1,11);
+		$printer->configBlock("ticket","quantity",2,1,8);
 		
 		$printer->printTicket();
+		
+// 		$text = $printer->textOnly();
+// 		$msg= new bas_html_messageBox(false, 'Ticket',$text);
+// 		echo $msg->jscommand();
+				
+		
 // 		$printer->configBlock("ticket","item",4);
 		
 	}
+
 	
 	private function lookupSubItems($group){
 		$qry ="select saleLine.item as item,sum(quantity) as quantity from saleLine left join item on item.item = saleLine.item where item.itemGroup='$group' and saleLine.saleNo={$this->curSale} group by item";
