@@ -4,28 +4,48 @@ class pos_ticketPrinter{
 	private $port = "50000";
     private $noImportacion;
     
+    private $typography=array();
     protected $blocks = array();
     protected $commands=array();
     
-    protected $lineSize=42;
+//     protected $lineSize=42;
+    protected $lineSize=55;
     protected $defaultSeparation=1;
     
     protected $separation;
 
     public function __construct($ip="192.168.33.48",$port="50000"){
 		$this->ip = $ip;
-		$this->setCommands();
+		$this->setConfig();
     }
 
-    private function setCommands(){
+    private function setConfig(){
 		$this->commands["cutPaper"] = "\x1dVA1";
 		$this->commands["rot90"] = "\x1B\x561";
 		
-		$this->commands["bold"] = "\x1BE1";
+		// 1 = enable. 0 = disable		
+		$this->commands["bold"] = "\x1BE";
 		$this->commands["italic"] = "";
-		$this->commands["underscore"] = "\x1B-1";
+		$this->commands["underscore"] = "\x1B-";
+		
+		$this->commands["alignCenter"] = "\x1B\x611";
+		$this->commands["alignLeft"] = "\x1B\x610";
+		$this->commands["alignRight"] = "\x1B\x612";
 		
 		
+		$this->commands["codeBarWidth"] = "\x1Dw";
+		$this->commands["codeBarHeight"] = "\x1Dh"; //SEguido del tamaño en Hex.
+		$this->commands["codeBarPrint"] = "\x1D\x6B\x02"; //COD CTR TypeCODEBAR seguido por el codigo y finalizado por NULL.
+		
+		$this->commands["standarMode"] = "\x1B\x53";
+		
+		$this->typography["normal"] = "\x1D!\x00";
+		$this->typography["tall"] = "\x1D!\x01";
+		$this->typography["heavy"] = "\x1D!\x10";
+		$this->typography["huge"] = "\x1D!\x11";
+		
+		$this->typography["default"] = "\x1B\x4D\x00";
+		$this->typography["condensed"] = "\x1B\x4D\x01" ;
     }
     
     
@@ -114,7 +134,7 @@ class pos_ticketPrinter{
 			$text = substr($text,0,$size);
 		}
 		
-		return $this->commands["underscore"].$this->commands["bold"].$text.$this->commands["bold"].$this->commands["underscore"];
+		return $text;
     }
     
     private function currentSeparation($numFields){
@@ -123,6 +143,7 @@ class pos_ticketPrinter{
     
 	private function textBlock($id){
 		$out = "";
+		$out = $this->typography["condensed"];
 		$orderFields = $this->getOrderFieldByBlock($id);
 		global $_LOG;
 		$_LOG->debug("antes de la transformacion",$orderFields);
@@ -185,17 +206,68 @@ class pos_ticketPrinter{
     
     }
     
+    
+	private function printAlignExample(){
+		$text  = $this->commands["standarMode"].$this->commands["alignCenter"]."Centrado \n";
+		
+		$text .= $this->commands["standarMode"].$this->commands["alignLeft"]."Izquierda \n";
+		
+		$text .= $this->commands["standarMode"].$this->commands["alignRight"]."Derecha \n";
+		
+		$text .= $this->commands["cutPaper"];
+		return $text;
+    }
+    
+    private function printCodeBarExample(){
+    
+		$text  = $this->commands["codeBarWidth"]."\x01".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:1, H:Default".$this->commands["cutPaper"];
+		
+        $text .= $this->commands["codeBarWidth"]."\x02".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:2, H:Default".$this->commands["cutPaper"];
+		$text .=$this->commands["codeBarWidth"]."\x03".$this->commands["codeBarHeight"]."w".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:3, H: W".$this->commands["cutPaper"];
+
+		$text .=$this->commands["codeBarWidth"]."\x04".$this->commands["codeBarHeight"]."w".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:4, H: W".$this->commands["cutPaper"];
+		$text .=$this->commands["codeBarWidth"]."\x05".$this->commands["codeBarHeight"]."w".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:5, H: W".$this->commands["cutPaper"];
+		$text .=$this->commands["codeBarWidth"]."\x06".$this->commands["codeBarHeight"]."w".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:6, H: W".$this->commands["cutPaper"];
+        
+        
+        $text .=$this->commands["codeBarWidth"]."\x04".$this->commands["codeBarHeight"]."\xDC".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:4, H: DC".$this->commands["cutPaper"];
+		$text .=$this->commands["codeBarWidth"]."\x05".$this->commands["codeBarHeight"]."w".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:5, H: W".$this->commands["cutPaper"];
+		$text .=$this->commands["codeBarWidth"]."\x06".$this->commands["codeBarHeight"]."6".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:6, H: 6".$this->commands["cutPaper"];
+        
+		return $text;
+    
+    }
+    
+    
+    private function printBitMapSimple(){
+		$text = "\x1b*\x01\x00\x02";
+		//$text .="\xff\x81\x81\x81\x81\x81\x81\x81";
+		for($ind=0;$ind<63;$ind++)		$text .="\xff\x81\x81\x81\x81\x81\x81\xff";
+		$text .="\xff\xff\xff\xff\xff\xff\xff\xff";
+		//$text .="\x81\x81\x81\x81\x81\x81\x81\xff";
+// 		$text .= "\x1b*\x00\x08\x00\xff\x81\x81\x81\x81\x81\x81\xff \n";
+		
+		$text .= $this->commands["cutPaper"];
+		return $text;
+    }
 
     
+    
+	private function print_Emphasized(){
+		$text  = $this->commands["bold"]."1 BOLD ".$this->commands["bold"]."0";
+		$text .= $this->commands["italic"]." Italic ".$this->commands["italic"];
+		$text .= $this->commands["underscore"]."1 UnderScore ".$this->commands["underscore"]."0";
+		$text .= "FIN".$this->commands["cutPaper"];
+		return $text;
+    }
     
     public function main(){
         $filename= $this->randomName(15,"ticket_");//"ticket.dat";
-        $text = $this->commands["rot90"]." Fijacion de espacios".$this->commands["rot90"]."  comoooooooo ".$this->commands["rot90"]."\n moooooolaaaaa \n estoooooo \n son 3.48  \x1dVA1";
-
-        // 		$text="\x1c\x7054 \x0\x1 211";
+        
+//         $text = $this->commands["rot90"]." Fijacion de espacios".$this->commands["rot90"]."  comoooooooo ".$this->commands["rot90"]."\n moooooolaaaaa \n estoooooo \n son 3.48  \x1dVA1";
+        $text = $this->print_Emphasized();
 
         if ($file= fopen($filename,'w')){
-//             $this->importFile($file);
             fwrite($file,$text);
             fclose($file);
             

@@ -178,7 +178,8 @@ class pos_step1 extends bas_frmx_form{
 		$ticket = array();
 
 // 		$qry ="select item,description, concat(quantity,'x',price) as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
-		$qry ="select item, concat(quantity,'x',price) as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";		
+// 		$qry ="select item, concat(quantity,'x',price) as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
+		$qry ="select item, if(quantity <> 1,if (quantity <> -1,concat(quantity,'x',price),\" \"),\" \") as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
 		$ds = new bas_sql_myqrydataset($qry);
 		$rec = $ds->reset();
 		while ($rec){ // obtenemos los periodos por factura
