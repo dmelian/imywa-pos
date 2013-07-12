@@ -205,11 +205,13 @@ class pos_step1 extends bas_frmx_form{
 		$printer->configBlock("header","lineAmount",3,1,"bold",11);
 		
 		
-		$printer->charSeparator("8");
+		$printer->charSeparator();
 		$printer->insertBlocK("ticket",$ticket);
 		$printer->configBlock("ticket","item",1,1,"none",12);		
 		$printer->configBlock("ticket","lineAmount",3,1,"bold",11);
 		$printer->configBlock("ticket","quantity",2,1,"none",8);
+		
+		$printer->charSeparator();
 		
 // 		$printer->printTicket();
 		

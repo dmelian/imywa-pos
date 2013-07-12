@@ -59,8 +59,9 @@ class pos_ticketPrinter{
     
     
     public function charSeparator($char="-"){
-		$this->insertBlock("SEP",array(array("data"=>str_repeat($char,$this->lineSize-1))) );// Identificador aleatorio
-		$this->configBlock("SEP","data",1,1,"none",$this->lineSize-1);
+		$id = uniqid("SEP_");
+		$this->insertBlock($id,array(array("data"=>str_repeat($char,$this->lineSize-1))) );// Identificador aleatorio
+		$this->configBlock($id,"data",1,1,"none",$this->lineSize-1);
     }
     
     public function configBlock($block,$field,$order,$priority=1,$style="none",$maxSize=0,$minSize=1){
