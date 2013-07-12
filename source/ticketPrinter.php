@@ -9,7 +9,7 @@ class pos_ticketPrinter{
     protected $commands=array();
     
 //     protected $lineSize=42;
-    protected $lineSize=55;
+    protected $lineSize=57;
     protected $defaultSeparation=1;
     
     protected $separation;
@@ -49,19 +49,26 @@ class pos_ticketPrinter{
     }
     
     
-    public function insertBlocK($id,$data){
-		if (!isset($this->blocks[$id])) $this->blocks[$id] = array("data"=>$data,"order"=>"","priority"=>"");
+    public function insertBlocK($id,$data,$typography="condensed",$align="alignLeft",$charSize="normal"){
+		if (!isset($this->blocks[$id])) $this->blocks[$id] = array("data"=>$data,"order"=>"","align"=>$align,"typography"=>$typography,"charSize"=>$charSize,"priority"=>"");
 		else{
 			global $_LOG;
 			$_LOG->log("Ha intentado introducir dos bloques con el mismo identificador. POS::ticketPrinter::insertBloc");
 		}
     }
     
-    public function configBlock($block,$field,$order,$priority=1,$maxSize=0,$minSize=1){
+    
+    public function charSeparator($char="-"){
+		$this->insertBlock("SEP",array(array("data"=>str_repeat($char,$this->lineSize-1))) );// Identificador aleatorio
+		$this->configBlock("SEP","data",1,1,"none",$this->lineSize-1);
+    }
+    
+    public function configBlock($block,$field,$order,$priority=1,$style="none",$maxSize=0,$minSize=1){
 		if (isset($this->blocks[$block])){ 
 			$this->blocks[$block]["fields"][$field]["priority"] = $priority;
 			$this->blocks[$block]["fields"][$field]["order"] = $order;
 			$this->blocks[$block]["fields"][$field]["maxSize"] = $maxSize;
+			$this->blocks[$block]["fields"][$field]["style"] = $style;
 		}
 		else{
 			global $_LOG;
@@ -75,7 +82,7 @@ class pos_ticketPrinter{
 		$orderArray = array();
 
 		foreach($this->blocks[$id]["fields"] as $field => $struc){
-			$orderArray[$struc["order"]][] = array("field"=>$field,"maxSize"=>$struc["maxSize"],"priority"=>$struc["priority"]);
+			$orderArray[$struc["order"]][] = array("field"=>$field,"maxSize"=>$struc["maxSize"],"priority"=>$struc["priority"],"style"=>$struc["style"]);
 		}
 		
 		global $_LOG;
@@ -98,10 +105,32 @@ class pos_ticketPrinter{
 		
     }
     
+    private function emphasized_Text($text,$type="bold"){
+		switch ($type){
+			case "bold":
+				return $this->commands["bold"]."1".$text.$this->commands["bold"]."0";
+			break;
+			
+			case "italic":
+			case "none":
+				return $text;
+			break;
+			
+			case "underscore":
+				return $this->commands["underscore"]."1".$text.$this->commands["underscore"]."0";			
+			break;		
+		}
+		global $_LOG;
+		$_LOG->log("ticketPrinter::emphasized_Text. Se ha utilizado un tipo de énfasis incorrecto. $type");
+		return "";
+    }
+    
     private function autoAjustSize($fields){
 		$nFields = count($fields);
 		$realLineSize = $this->lineSize - $nFields*$this->defaultSeparation;
 		$boxLineSize=0;
+		
+		if ($nFields == 1)$nFields++;
 		
 		foreach($fields as $field){
 			$boxLineSize += $field["maxSize"];
@@ -134,6 +163,11 @@ class pos_ticketPrinter{
 			$text = substr($text,0,$size);
 		}
 		
+		$emphasis = explode(",",$style);
+		foreach($emphasis as $item){
+			$text = $this->emphasized_Text($text,$item);
+		}
+		
 		return $text;
     }
     
@@ -143,7 +177,9 @@ class pos_ticketPrinter{
     
 	private function textBlock($id){
 		$out = "";
-		$out = $this->typography["condensed"];
+		$typography = $this->blocks[$id]["typography"];
+		$alignBlock = $this->blocks[$id]["align"];
+		$out = $this->typography[$typography].$this->commands["standarMode"].$this->commands[$alignBlock];
 		$orderFields = $this->getOrderFieldByBlock($id);
 		global $_LOG;
 		$_LOG->debug("antes de la transformacion",$orderFields);
@@ -153,15 +189,21 @@ class pos_ticketPrinter{
 		$_LOG->debug("Despues de la transformacion",$orderFields);
 
 		$data = $this->blocks[$id]["data"];
+		$_LOG->debug("Informacion del bloque ",$data);
 		foreach($data as $row){
 			$sep="";
 			$indField=0;
 			$numFields  = count($orderFields);
-			foreach($orderFields as $order){
-				$out .= $sep.$this->formatText($row[$order["field"]],$order["maxSize"]);
-				$sep = str_repeat(" ",$this->separation-1);
-// 				$sep = $this->currentSeparation($indField,$numFields);
-				$indField++;
+			if ($numFields == 1){
+				$out .= $this->formatText($row[$orderFields[0]["field"]],strlen($row[$orderFields[0]["field"]]),$orderFields[0]["style"]);
+			}
+			else{
+				foreach($orderFields as $order){
+					$out .= $sep.$this->formatText($row[$order["field"]],$order["maxSize"],$order["style"]);
+					$sep = str_repeat(" ",$this->separation-1);
+	// 				$sep = $this->currentSeparation($indField,$numFields);
+					$indField++;
+				}
 			}
 			$out.="\n";
 		}

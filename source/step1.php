@@ -179,7 +179,7 @@ class pos_step1 extends bas_frmx_form{
 
 // 		$qry ="select item,description, concat(quantity,'x',price) as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
 // 		$qry ="select item, concat(quantity,'x',price) as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
-		$qry ="select item, if(quantity <> 1,if (quantity <> -1,concat(quantity,'x',price),\" \"),\" \") as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
+		$qry ="select item, if(quantity <> 1,if (quantity <> -1,concat(quantity,'x',truncate(price,2)),\" \"),\" \") as quantity, truncate(lineAmount,2) as lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
 		$ds = new bas_sql_myqrydataset($qry);
 		$rec = $ds->reset();
 		while ($rec){ // obtenemos los periodos por factura
@@ -193,23 +193,30 @@ class pos_step1 extends bas_frmx_form{
 		$_LOG->debug("Valor del ticket",$ticket);
 		
 		$printer = new pos_ticketPrinter();
+		
+		$temp[] = array("data"=>"PEPEPEPEPEPE");
+		$printer->insertBlocK("temp",$temp,"condensed","alignCenter");
+		$printer->configBlock("temp","data",1,1,"underscore,bold",25);	
+		
 		$header[] = array("item"=>"Producto","quantity"=>"Cantidad","lineAmount"=>"Total");
 		$printer->insertBlocK("header",$header);
-		$printer->configBlock("header","item",1,1,12);
-		$printer->configBlock("header","quantity",2,1,8);
-		$printer->configBlock("header","lineAmount",3,1,11);
+		$printer->configBlock("header","item",1,1,"none",12);
+		$printer->configBlock("header","quantity",2,1,"none",8);
+		$printer->configBlock("header","lineAmount",3,1,"bold",11);
 		
+		
+		$printer->charSeparator("8");
 		$printer->insertBlocK("ticket",$ticket);
-		$printer->configBlock("ticket","item",1,1,12);		
-		$printer->configBlock("ticket","lineAmount",3,1,11);
-		$printer->configBlock("ticket","quantity",2,1,8);
+		$printer->configBlock("ticket","item",1,1,"none",12);		
+		$printer->configBlock("ticket","lineAmount",3,1,"bold",11);
+		$printer->configBlock("ticket","quantity",2,1,"none",8);
 		
-		$printer->printTicket();
+// 		$printer->printTicket();
 		
-// 		$text = $printer->textOnly();
-// 		$msg= new bas_html_messageBox(false, 'Ticket',$text);
-// 		echo $msg->jscommand();
-				
+		$text = $printer->textOnly();
+		$msg= new bas_html_messageBox(false, 'Ticket',$text);
+		echo $msg->jscommand();
+// 				
 		
 // 		$printer->configBlock("ticket","item",4);
 		
