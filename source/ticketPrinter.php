@@ -13,6 +13,8 @@ class pos_ticketPrinter{
     protected $defaultSeparation=1;
     
     protected $separation;
+    protected $header=null;
+    protected $footer=null;
 
     public function __construct($ip="192.168.33.48",$port="50000"){
 		$this->ip = $ip;
@@ -61,15 +63,16 @@ class pos_ticketPrinter{
     public function charSeparator($char="-"){
 		$id = uniqid("SEP_");
 		$this->insertBlock($id,array(array("data"=>str_repeat($char,$this->lineSize-1))) );// Identificador aleatorio
-		$this->configBlock($id,"data",1,1,"none",$this->lineSize-1);
+		$this->configBlock($id,"data",1,1,"none","none",$this->lineSize-1);
     }
     
-    public function configBlock($block,$field,$order,$priority=1,$style="none",$maxSize=0,$minSize=1){
+    public function configBlock($block,$field,$order,$priority=1,$style="none",$align="none",$maxSize=0,$minSize=1){
 		if (isset($this->blocks[$block])){ 
 			$this->blocks[$block]["fields"][$field]["priority"] = $priority;
 			$this->blocks[$block]["fields"][$field]["order"] = $order;
 			$this->blocks[$block]["fields"][$field]["maxSize"] = $maxSize;
 			$this->blocks[$block]["fields"][$field]["style"] = $style;
+			$this->blocks[$block]["fields"][$field]["align"] = $align;
 		}
 		else{
 			global $_LOG;
@@ -83,11 +86,11 @@ class pos_ticketPrinter{
 		$orderArray = array();
 
 		foreach($this->blocks[$id]["fields"] as $field => $struc){
-			$orderArray[$struc["order"]][] = array("field"=>$field,"maxSize"=>$struc["maxSize"],"priority"=>$struc["priority"],"style"=>$struc["style"]);
+			$orderArray[$struc["order"]][] = array("field"=>$field,"maxSize"=>$struc["maxSize"],"priority"=>$struc["priority"],"style"=>$struc["style"],"align"=>$struc["align"]);
 		}
 		
 		global $_LOG;
-		$_LOG->debug("Valor preordenado",$orderArray);
+// 		$_LOG->debug("Valor preordenado",$orderArray);
 		
 		$numFields = count($orderArray);
 		for($ind=0;$ind <= $numFields; $ind++){
@@ -102,8 +105,38 @@ class pos_ticketPrinter{
 		return $order;
     }
     
-    private function alignText($text,$sizeMax,$type="right"){
-		
+    private function alignText($text,$textSize,$maxSize,$type="none"){
+    
+		switch ($type){
+			case "left":
+				$text .= str_repeat(" ",$maxSize-$textSize);
+				return $text;
+			break;
+			case "center":
+				$left=1;
+				for($ind=0;$ind < ($maxSize-$textSize) ; $ind++){
+					if ($left == 1){
+						$text = " ".$text;
+						$left=0;
+					}
+					else{
+						$text .= " ";
+						$left=1;
+					}
+				}
+				return $text;
+			break;
+			case "none":
+				return $text;
+			break;
+			case "right":
+				$text = str_repeat(" ",$maxSize-$textSize).$text;
+				return $text;
+			break;		
+		}
+		global $_LOG;
+		$_LOG->log("ticketPrinter::alignText. Se ha utilizado un tipo de alineado incorrecto. $type");
+		return "##Error";
     }
     
     private function emphasized_Text($text,$type="bold"){
@@ -127,22 +160,38 @@ class pos_ticketPrinter{
     }
     
     private function autoAjustSize($fields){
+		global $_LOG;
 		$nFields = count($fields);
-		$realLineSize = $this->lineSize - $nFields*$this->defaultSeparation;
+		$realLineSize = $this->lineSize - ($nFields-1)*$this->defaultSeparation;
 		$boxLineSize=0;
+		$autoAjust = array();
 		
 		if ($nFields == 1)$nFields++;
 		
-		foreach($fields as $field){
-			$boxLineSize += $field["maxSize"];
+		foreach($fields as $id => $field){
+			if ($field["maxSize"] != -1)$boxLineSize += $field["maxSize"];
+			else{
+				$autoAjust[] = $id;
+			}
 		}
 		
 		if ($boxLineSize <= $realLineSize){
+			$newSize = 0;
+			if (count($autoAjust) != 0){
+				$newSize = ($realLineSize - $boxLineSize) / count($autoAjust) ;
+				$newSize = ceil($newSize);
+				foreach($autoAjust as $idField){
+					
+					$fields[$idField]["maxSize"]= $newSize;
+					$boxLineSize += $fields[$idField]["maxSize"];
+				}
+			}
 			$separation = ($this->lineSize - $boxLineSize)/($nFields-1);
 			$separation = ceil($separation);
+			$_LOG->debug("Valor del tamaño:$newSize, Separacion:$separation, Num elem: ".count($autoAjust),array());
 		}
-		else{ // Debemos hacer un auto ajuste.
-		
+		else{ // Debemos hacer un auto ajuste.  ### De momento no se tiene en cuenta la prioridad
+			
 		}
 		$this->separation = $separation;
 		
@@ -151,16 +200,12 @@ class pos_ticketPrinter{
     }
     
     
-    private function formatText($text,$size,$style=""){
+    private function formatText($text,$size,$style="",$align="none"){
 		$textSize = strlen($text);
 		global $_LOG;
 		$_LOG->log("tamaño del size:   ".$size);
-		if ($textSize <= $size){
-			for($ind=0;$ind < ($size-$textSize) ; $ind++){
-				$text .= " ";
-			}
-		}
-		else{
+		
+		if ($textSize > $size){
 			$text = substr($text,0,$size);
 		}
 		
@@ -168,6 +213,7 @@ class pos_ticketPrinter{
 		foreach($emphasis as $item){
 			$text = $this->emphasized_Text($text,$item);
 		}
+		$text = $this->alignText($text,$textSize,$size,$align);
 		
 		return $text;
     }
@@ -183,25 +229,25 @@ class pos_ticketPrinter{
 		$out = $this->typography[$typography].$this->commands["standarMode"].$this->commands[$alignBlock];
 		$orderFields = $this->getOrderFieldByBlock($id);
 		global $_LOG;
-		$_LOG->debug("antes de la transformacion",$orderFields);
+// 		$_LOG->debug("antes de la transformacion",$orderFields);
 		
 		$orderFields = $this->autoAjustSize($orderFields);
 		
-		$_LOG->debug("Despues de la transformacion",$orderFields);
+// 		$_LOG->debug("Despues de la transformacion",$orderFields);
 
 		$data = $this->blocks[$id]["data"];
-		$_LOG->debug("Informacion del bloque ",$data);
+// 		$_LOG->debug("Informacion del bloque ",$data);
 		foreach($data as $row){
 			$sep="";
 			$indField=0;
 			$numFields  = count($orderFields);
 			if ($numFields == 1){
-				$out .= $this->formatText($row[$orderFields[0]["field"]],strlen($row[$orderFields[0]["field"]]),$orderFields[0]["style"]);
+				$out .= $this->formatText($row[$orderFields[0]["field"]],strlen($row[$orderFields[0]["field"]]),$orderFields[0]["style"],$orderFields[0]["align"]);
 			}
 			else{
 				foreach($orderFields as $order){
-					$out .= $sep.$this->formatText($row[$order["field"]],$order["maxSize"],$order["style"]);
-					$sep = str_repeat(" ",$this->separation-1);
+					$out .= $sep.$this->formatText($row[$order["field"]],$order["maxSize"],$order["style"],$order["align"]);
+					$sep = str_repeat(" ",$this->separation);
 	// 				$sep = $this->currentSeparation($indField,$numFields);
 					$indField++;
 				}
@@ -212,31 +258,65 @@ class pos_ticketPrinter{
     }
     
     public function printTicket(){
-		$out = "";
-		foreach($this->blocks as $blockID => $empty){
-			$out .= $this->textBlock($blockID);
-		}
-		$out .= $this->commands["cutPaper"];
 		
+		$out = $this->buildTicket();
 		$filename= $this->randomName(15,"/var/www/print/ticket_");//"ticket.dat";
 
         if ($file= fopen($filename,'x+')){
             fwrite($file,$out);
             fclose($file);
         }
-        
         $this->printNow($filename);
         
         unlink($filename);
     }
     
     
-    public function textOnly(){
+    
+    private function buildTicket(){
 		$out = "";
+		if (isset($this->header)) $out.= $this->textHeader($this->header);
+		
 		foreach($this->blocks as $blockID => $empty){
 			$out .= $this->textBlock($blockID);
 		}
+		
+		if (isset($this->footer)) $out.= $this->textHeader($this->footer);
+		
 		$out .= $this->commands["cutPaper"];
+		
+		return $out;
+    }
+    
+    private function textHeader($block){
+		global $_LOG;
+		
+// 		$_LOG->debug("Entramos en el textHEader!!!!",array());
+		$out = "";
+		$typography = $block["typography"];
+		$alignBlock = $block["align"];
+		$out = $this->typography[$typography].$this->commands["standarMode"].$this->commands[$alignBlock];
+		
+
+		$data = $block["data"];
+// 		$_LOG->debug("Informacion del bloque ",$data);
+		
+		$out .= $this->formatText($data ,strlen($data),$block["style"],"none");
+		$out .="\n";
+		return $out;    
+    }
+    
+    public function setHeader($data,$typography="condensed",$align="alignCenter",$emphasis="none",$charSize="normal"){
+		$this->header = array("data"=>$data,"style"=>$emphasis,"align"=>$align,"typography"=>$typography,"charSize"=>$charSize);
+    }
+    
+    public function setFooter($data,$typography="condensed",$align="alignCenter",$emphasis="none",$charSize="normal"){
+		$this->footer = array("data"=>$data,"style"=>$emphasis,"align"=>$align,"typography"=>$typography,"charSize"=>$charSize);    
+    }
+    
+    
+    public function textOnly(){
+		$out = $this->buildTicket();
 		return $out;
     }
     
@@ -246,7 +326,6 @@ class pos_ticketPrinter{
 		
 		if (!is_null($salida)) return " SE ha producido un error en la emisión. Asegúrece que la impresora está activa\n";
 		else return $salida;
-    
     }
     
     
@@ -278,7 +357,6 @@ class pos_ticketPrinter{
 		$text .=$this->commands["codeBarWidth"]."\x06".$this->commands["codeBarHeight"]."6".$this->commands["codeBarPrint"]."4007817304693\x00 \n W:6, H: 6".$this->commands["cutPaper"];
         
 		return $text;
-    
     }
     
     
@@ -294,8 +372,6 @@ class pos_ticketPrinter{
 		return $text;
     }
 
-    
-    
 	private function print_Emphasized(){
 		$text  = $this->commands["bold"]."1 BOLD ".$this->commands["bold"]."0";
 		$text .= $this->commands["italic"]." Italic ".$this->commands["italic"];
@@ -345,5 +421,6 @@ class pos_ticketPrinter{
 		}
 		return $out;    
     }
+
 }  
 ?>

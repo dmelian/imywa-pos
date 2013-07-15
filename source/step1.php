@@ -190,35 +190,63 @@ class pos_step1 extends bas_frmx_form{
 		
 		
 		global $_LOG;
-		$_LOG->debug("Valor del ticket",$ticket);
+// 		$_LOG->debug("Valor del ticket",$ticket);
 		
 		$printer = new pos_ticketPrinter();
 		
-		$temp[] = array("data"=>"PEPEPEPEPEPE");
-		$printer->insertBlocK("temp",$temp,"condensed","alignCenter");
-		$printer->configBlock("temp","data",1,1,"underscore,bold",25);	
+// 		$temp[] = array("data"=>"PEPEPEPEPEPE");
+// 		$printer->insertBlocK("temp",$temp,"condensed","alignCenter");
+// 		$printer->configBlock("temp","data",1,1,"underscore,bold","none",25);	
 		
 		$header[] = array("item"=>"Producto","quantity"=>"Cantidad","lineAmount"=>"Total");
 		$printer->insertBlocK("header",$header);
-		$printer->configBlock("header","item",1,1,"none",12);
-		$printer->configBlock("header","quantity",2,1,"none",8);
-		$printer->configBlock("header","lineAmount",3,1,"bold",11);
+		$printer->configBlock("header","item",1,1,"none","center",12);
+		$printer->configBlock("header","quantity",2,1,"none","center",8);
+		$printer->configBlock("header","lineAmount",3,1,"bold","center",11);
 		
 		
 		$printer->charSeparator();
 		$printer->insertBlocK("ticket",$ticket);
-		$printer->configBlock("ticket","item",1,1,"none",12);		
-		$printer->configBlock("ticket","lineAmount",3,1,"bold",11);
-		$printer->configBlock("ticket","quantity",2,1,"none",8);
+		$printer->configBlock("ticket","item",1,1,"none","left",-1);		
+		$printer->configBlock("ticket","lineAmount",3,1,"bold","right",11);
+		$printer->configBlock("ticket","quantity",2,1,"none","right",8);
 		
 		$printer->charSeparator();
+		
+// 		select discountAmount as discount, VATAmount as VAT, totalAmount as total from ticket limit 6;
+
+		$qry = "select discountAmount as discount, VATAmount as VAT, totalAmount as total from ticket where ticketNo='{$this->lastTicket}'";
+		$dataset= new bas_sql_myquery($qry);
+		
+		
+		$total[] = array("empty"=>"","caption"=>"Total","total"=>$dataset->result['total']);
+		$descuento[] = array("empty"=>"","caption"=>"Dto.","total"=>$dataset->result['discount']);
+		$vat[] = array("empty"=>"","caption"=>"IGIC","total"=>$dataset->result['VAT']);
+		
+		$printer->insertBlocK("IGIC",$vat);
+		$printer->configBlock("IGIC","empty",1,1,"none","none",12);		
+		$printer->configBlock("IGIC","caption",2,1,"bold","right",11);
+		$printer->configBlock("IGIC","total",3,1,"none","right",8);
+		
+		$printer->insertBlocK("dto",$descuento);
+		$printer->configBlock("dto","empty",1,1,"none","none",12);		
+		$printer->configBlock("dto","caption",2,1,"bold","right",11);
+		$printer->configBlock("dto","total",3,1,"none","right",8);
+		
+		$printer->insertBlocK("total",$total);
+		$printer->configBlock("total","empty",1,1,"none","none",12);		
+		$printer->configBlock("total","caption",2,1,"bold","right",11);
+		$printer->configBlock("total","total",3,1,"none","right",8);
+		
+		
+		$printer->setHeader("Bienvenido","default","alignCenter","none","heavy");		
+		$printer->setFooter("Gracias por su visita","default","alignCenter","none","huge");
 		
 // 		$printer->printTicket();
 		
 		$text = $printer->textOnly();
 		$msg= new bas_html_messageBox(false, 'Ticket',$text);
 		echo $msg->jscommand();
-// 				
 		
 // 		$printer->configBlock("ticket","item",4);
 		

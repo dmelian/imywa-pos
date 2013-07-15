@@ -6,11 +6,14 @@
 # Se pueden insertar separadores usando caracteres. (de momento solo 1 separador)
 
 ! Introducir el pie y encabezado de ticket.
-! Permitir logos e imagenes.
+	# Realizado
+! Permitir logos e imagenes..
+
 ! Debemos realizar el identificador del bloque (para separadores) totalmente aleatorio.
 	# Realizado.
 ! Tenemos que permitir poder indicar columnas autoajustables.
 ! Alineamiento de las columnas (alineamiento por software)
+	# Realizado
 
 ! Aspecto visual a mejorar/completar
 ! Aspecto visual del display.
