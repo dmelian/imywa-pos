@@ -20,6 +20,8 @@ class pos_app extends bas_sysx_app{
 		
 		$out .= "</div>";
 		
+		$out .= "<div class=\"buttonDisplay\" style=\"border-style:solid;padding-top:21px;height:62%;width: 100%;\">";
+		$out .= "</div>";
 		return $out;
 	}
 	

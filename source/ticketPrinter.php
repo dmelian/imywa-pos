@@ -9,7 +9,7 @@ class pos_ticketPrinter{
     protected $commands=array();
     
 //     protected $lineSize=42;
-    protected $lineSize=57;
+    protected $lineSize=56;
     protected $defaultSeparation=1;
     
     protected $separation;

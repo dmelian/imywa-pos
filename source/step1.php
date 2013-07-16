@@ -6,6 +6,7 @@ class pos_step1 extends bas_frmx_form{
 	private $currentApp;
 	private $lastItems=array();
 	private $lastTicket;
+	private $actionDisplay;
 	
 	public function OnLoad(){
 		parent::OnLoad();
@@ -56,7 +57,14 @@ class pos_step1 extends bas_frmx_form{
 		
 		$this->curSale = $dataset->result['saleNo'];
 		
-		$actions= new bas_frmx_panelGrid("action",array('width'=>2,'height'=>3));
+		
+		
+// 		$actions= new bas_frmx_panelGrid("action",array('width'=>1,'height'=>3));
+// 		$actions->setEvent("actions_event");
+		
+		
+		
+		/*$actions= new bas_frmx_panelGrid("action",array('width'=>2,'height'=>3));
 		$actions->setEvent("actions_event");
 		$actions->addComponent(1,1,"cobro","Cobro");
 		$actions->addComponent(1,2,"ticket","Ticket");
@@ -65,22 +73,42 @@ class pos_step1 extends bas_frmx_form{
 		$actions->addComponent(2,2,"delete","Borrar");
 		
 		$actions->addComponent(3,1,"paid","Pagar");
-		$actions->addComponent(3,2,"new","nuevo");
+		$actions->addComponent(3,2,"new","nuevo");*/
 		
 		// id,obj,y,x,width,height
 		$frame= new bas_frmx_gridFrame("buttons", array("POS"),array('width'=>10,'height'=>8));
 		$frame->addComponent("group",$groups	,1,1, 1,7);
 		$frame->addComponent("item"	,$items		,1,2, 7,7);
 		
-		$frame->addComponent("action"	,$actions,5,9, 2,4);
+// 		$frame->addComponent("action"	,$actions,5,9, 2,4);
 		$frame->addComponent("qty"	,$quantities,8,1, 8,1);
 		
 // 		$frame->setHeader("Prueba de header");
 		
 		$this->addFrame($frame);
+		
+		$this->buildActionGrid();
+		
 		if ($this->curSale != null)$this->lookupSubItems('g2');
 	}
 	
+	
+	private function buildActionGrid(){
+		$location= $this->call('action_display');
+		$ind=1;
+		$location = explode("::",$location);
+		
+		$actions= new bas_frmx_panelGrid("action",array('width'=>1,'height'=>3));
+		$actions->setEvent("actions_event");
+		
+		foreach($location as $item){
+			if ($item != "empty")$actions->addComponent($ind,1,$item,$item);
+			$ind++;
+		}
+		
+		$this->frames["buttons"]->addComponent("action"	,$actions,5,9, 2,4);
+		$this->actionDisplay=$actions;
+	}
 	
 	
 	private function buildQuery($filter){
@@ -96,7 +124,7 @@ class pos_step1 extends bas_frmx_form{
 	
 	private function make_action($action){
 		switch ($action){
-			case 'cobro':
+			case 'bill':
 				$out = $this->call("sale_bill");
 				if ($out != "error") {
 					$this->lastTicket = $out;
@@ -118,14 +146,14 @@ class pos_step1 extends bas_frmx_form{
 					$this->printTicket();
 				}
 			break;
-			case 'revisar':
+			case 'revise':
 				$out = $this->call("sale_revise");
 				if ($out != "error") {
 					$this->lastTicket = $out;
 					$this->printTicket();
 				}
 			break;
-			case 'paid':
+			case 'pay':
 				$this->call("sale_pay",array("cash",500));
 			break;
 			case 'delete':
@@ -135,6 +163,7 @@ class pos_step1 extends bas_frmx_form{
 				
 		
 		}
+		$this->buildActionGrid();
 	}
 	
 	private function OnRefreshDashBoard(){
@@ -224,17 +253,17 @@ class pos_step1 extends bas_frmx_form{
 		$vat[] = array("empty"=>"","caption"=>"IGIC","total"=>$dataset->result['VAT']);
 		
 		$printer->insertBlocK("IGIC",$vat);
-		$printer->configBlock("IGIC","empty",1,1,"none","none",12);		
+		$printer->configBlock("IGIC","empty",1,1,"none","left",-1);		
 		$printer->configBlock("IGIC","caption",2,1,"bold","right",11);
 		$printer->configBlock("IGIC","total",3,1,"none","right",8);
 		
 		$printer->insertBlocK("dto",$descuento);
-		$printer->configBlock("dto","empty",1,1,"none","none",12);		
+		$printer->configBlock("dto","empty",1,1,"none","left",-1);		
 		$printer->configBlock("dto","caption",2,1,"bold","right",11);
 		$printer->configBlock("dto","total",3,1,"none","right",8);
 		
 		$printer->insertBlocK("total",$total);
-		$printer->configBlock("total","empty",1,1,"none","none",12);		
+		$printer->configBlock("total","empty",1,1,"none","left",-1);		
 		$printer->configBlock("total","caption",2,1,"bold","right",11);
 		$printer->configBlock("total","total",3,1,"none","right",8);
 		
@@ -242,11 +271,11 @@ class pos_step1 extends bas_frmx_form{
 		$printer->setHeader("Bienvenido","default","alignCenter","none","heavy");		
 		$printer->setFooter("Gracias por su visita","default","alignCenter","none","huge");
 		
-// 		$printer->printTicket();
+		$printer->printTicket();
 		
-		$text = $printer->textOnly();
-		$msg= new bas_html_messageBox(false, 'Ticket',$text);
-		echo $msg->jscommand();
+// 		$text = $printer->textOnly();
+// 		$msg= new bas_html_messageBox(false, 'Ticket',$text);
+// 		echo $msg->jscommand();
 		
 // 		$printer->configBlock("ticket","item",4);
 		
@@ -262,6 +291,22 @@ class pos_step1 extends bas_frmx_form{
 			$rec = $ds->next();			
 		}	
 		$ds->close();
+	}
+
+	
+	public function sendButton(){
+		global $_LOG;
+		ob_start();
+		$this->actionDisplay->OnPaint();
+		$html = ob_get_contents();
+		ob_end_clean();
+		$html = addcslashes($html,'"\\/');//addcslashes($html,'"');
+// 		$html=json_decode($html);
+
+		echo '{"command":"reload","selector":".buttonDisplay","content":"'.$html.'"}';
+		
+// 		$msg= new bas_html_messageBox(false, 'Item!!',$html);//json_last_error());
+// 		echo $msg->jscommand();
 	}
 
 	public function OnAction($action, $data=""){
@@ -291,7 +336,9 @@ class pos_step1 extends bas_frmx_form{
 					// se ha producido un error en la inserción.
                     $msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
                     echo $msg->jscommand();
-                }               
+                }             
+                
+                $this->quantity = $this->signo;
 			
 				break;
 			case 'select_group':
@@ -303,8 +350,9 @@ class pos_step1 extends bas_frmx_form{
 				break;
 			case 'actions_event':
 				$this->make_action($data["item"]);
-// 				 $msg= new bas_html_messageBox(false, 'Item!!',$data["item"]);
-// 				echo $msg->jscommand();
+				$this->sendButton();
+// 				$this->OnPaint("jscommand");
+
 			break;
 			case 'num_items':
 				if ($data["item"] == "-") $this->signo = $this->signo * -1;

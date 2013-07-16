@@ -4,20 +4,30 @@
 # Se puede específicar el énfasis de las columnas
 # Se puede indicar la alineación de los bloques, el tipo de tipografía (normal o condensada) y el tamaño de letra
 # Se pueden insertar separadores usando caracteres. (de momento solo 1 separador)
-
 ! Introducir el pie y encabezado de ticket.
 	# Realizado
-! Permitir logos e imagenes..
-
+! Tenemos que permitir poder indicar columnas autoajustables.
+	# Realizado
+		! Revision de ajustes.
+		# Revisado.
 ! Debemos realizar el identificador del bloque (para separadores) totalmente aleatorio.
 	# Realizado.
-! Tenemos que permitir poder indicar columnas autoajustables.
 ! Alineamiento de las columnas (alineamiento por software)
 	# Realizado
-
+! Introducir las acciones en el dashboard
+	#Realizado
+! Hacer las acciones "inteligentes"
+	# Realizado
+! Hacer que las acciones y las posiciones las indique SP.
+	# REalizado
+	
+! Permitir logos e imagenes..
 ! Aspecto visual a mejorar/completar
+	! Marcar los seleccionados (items y cantidad)
+	! Solo visualizar los añadidos cuando vamos a eliminar/quitar.
+	! Solicitar tipo de pago y calcular en efectivo.
+	! Indicar motivo de anulacion
+	
 ! Aspecto visual del display.
 ! Automatizar el contenido del display.
-! Introducir las acciones en el dashboard
-! Hacer las acciones "inteligentes"
-! Hacer que las acciones y las posiciones las indique SP.
+
