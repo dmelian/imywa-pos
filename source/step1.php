@@ -268,8 +268,11 @@ class pos_step1 extends bas_frmx_form{
 		$printer->configBlock("total","total",3,1,"none","right",8);
 		
 		
-		$printer->setHeader("Bienvenido","default","alignCenter","none","heavy");		
-		$printer->setFooter("Gracias por su visita","default","alignCenter","none","huge");
+		$qry = "select ticketHeader as header, ticketFooter as footer from pos where id=1";
+		$dataset= new bas_sql_myquery($qry);
+		
+		$printer->setHeader($dataset->result['header'],"default","alignCenter","none","heavy");		
+		$printer->setFooter($dataset->result['footer'],"default","alignCenter","none","huge");
 		
 		$printer->printTicket();
 		

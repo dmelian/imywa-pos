@@ -38,6 +38,8 @@ create table if not exists pos(
 	VATPercentage float,
 	mainItemGroup varchar(20),
 	ticketSerialNo varchar(10),
+	ticketHeader varchar(150),
+	ticketFooter varchar(150),
 	foreign key (workDay) references workDay(workDay) on delete RESTRICT on update cascade
 ) engine InnoDB, default character set utf8;
 

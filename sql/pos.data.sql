@@ -1,6 +1,6 @@
 
 insert into serialNumber(serialNo,prefix,calendarPrefix,padding,periodReset) values (1,'GLM','%y%w',6,'%Y');
-insert into pos (id,VATPercentage,ticketSerialNo) values (1,0.07,1);
+insert into pos (id,VATPercentage,ticketSerialNo,ticketHeader,ticketFooter) values (1,0.07,1,"Bienvenido \n Esto era un tipo muy gracioso..","Gracias por su visita\n No lo olvidaremos");
 
 set @myItemGroup='main';	
 insert into item(item, type, itemGroup, description, price) values

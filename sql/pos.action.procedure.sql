@@ -20,6 +20,8 @@ begin
 			select 0 as error, 'new::priceView::anull' as message;
 		WHEN 'anulled' THEN
 			select 0 as error, 'new::empty::priceView' as message;
+		ELSE
+			select 0 as error, 'new::empty::empty' as message;
 	END CASE;
 end$$
 
