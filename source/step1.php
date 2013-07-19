@@ -26,8 +26,9 @@ class pos_step1 extends bas_frmx_form{
 // 		$groups->query->setFilter('main');
 		
 		$groups->mainField="item";
-		$groups->setQuery($this->buildQuery(array("itemGroup"=>"main")));
 		$groups->setEvent("select_group");
+		$groups->setQuery($this->buildQuery(array("itemGroup"=>"main")));
+		
 // 		$groups->setRecord();
 
 		$items= new bas_frmx_panelGridQuery("item",array('width'=>4,'height'=>5));
@@ -38,8 +39,9 @@ class pos_step1 extends bas_frmx_form{
 		
 		
 		$items->mainField="item";
-		$items->setQuery($this->buildQuery(array("itemGroup"=>"g2")));
 		$items->setEvent("select_item");
+		$items->setQuery($this->buildQuery(array("itemGroup"=>"g2")));
+		
 // 		$items->setRecord();
 
 		$quantities= new bas_frmx_panelGrid("items",array('width'=>10,'height'=>1));
@@ -314,6 +316,8 @@ class pos_step1 extends bas_frmx_form{
 
 	public function OnAction($action, $data=""){
 		parent::OnAction($action,$data);
+		global $_LOG;
+		$_LOG->debug("Evento enviado!!! $action",$data);
 		switch($action){
 			case 'close': return array('close');
 			case 'edit':
