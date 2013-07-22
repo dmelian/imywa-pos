@@ -1,13 +1,9 @@
 <?php
 class pos_step1 extends bas_frmx_form{
-	private $signo=1;
-	private $quantity = 1;
+	private $signo=1;			private $quantity = 1;
 	private $curSale;
-	private $currentApp;
-	private $lastItems=array();
-	private $lastTicket;
-	private $actionDisplay;
-	private $display;
+	private $currentApp;		private $lastTicket;
+	private $actionDisplay;		private $display;
 	
 	public function OnLoad(){
 		parent::OnLoad();
@@ -21,24 +17,13 @@ class pos_step1 extends bas_frmx_form{
 		$this->buttonbar = new bas_frmx_buttonbar();
 
 		$groups= new bas_frmx_panelGridQuery("group",array('width'=>1,'height'=>5));
-// 		$groups->query->add("item");
-// 		$groups->query->addcol("item","I","item");
-// 		$groups->query->addcol("itemGroup", "G");
-// 		$groups->query->setFilter('main');
 		
 		$groups->mainField="item";
 		$groups->setEvent("select_group");
 		$groups->setQuery($this->buildQuery(array("itemGroup"=>"main")));
 		
-// 		$groups->setRecord();
-
 		$items= new bas_frmx_panelGridQuery("item",array('width'=>4,'height'=>5));
-// 		$items->query->add("item");
-// 		$items->query->addcol("item","I","item");
-// 		$items->query->addcol("itemGroup", "G");
-// 		$items->query->setFilter('g2');
-		
-		
+
 		$items->mainField="item";
 		$items->setEvent("select_item");
 		$items->setQuery($this->buildQuery(array("itemGroup"=>"g2")));
@@ -54,8 +39,7 @@ class pos_step1 extends bas_frmx_form{
 		for ($ind=2; $ind<11;$ind++){
 			$quantities->addComponent(1,$ind,$ind-1,$ind-1);
 		}
-		
-		
+				
 		$qry = "select saleNo,saleAmount from sale where state <> 'deleted' and state <>'paid'order by saleNo DESC limit 1";
 		$dataset= new bas_sql_myquery($qry);
 		
@@ -73,22 +57,6 @@ class pos_step1 extends bas_frmx_form{
 		$ds->close();
 		
 		$this->display = new pos_display($this->curSale,$dataset->result['saleAmount'],$lastItems);
-		
-// 		$actions= new bas_frmx_panelGrid("action",array('width'=>1,'height'=>3));
-// 		$actions->setEvent("actions_event");
-		
-		
-		
-		/*$actions= new bas_frmx_panelGrid("action",array('width'=>2,'height'=>3));
-		$actions->setEvent("actions_event");
-		$actions->addComponent(1,1,"cobro","Cobro");
-		$actions->addComponent(1,2,"ticket","Ticket");
-		
-		$actions->addComponent(2,1,"revisar","Revisar");
-		$actions->addComponent(2,2,"delete","Borrar");
-		
-		$actions->addComponent(3,1,"paid","Pagar");
-		$actions->addComponent(3,2,"new","nuevo");*/
 		
 		// id,obj,y,x,width,height
 		$frame= new bas_frmx_gridFrame("buttons", array("POS"),array('width'=>10,'height'=>8));
@@ -181,16 +149,7 @@ class pos_step1 extends bas_frmx_form{
 		$this->buildActionGrid();
 	}
 	
-	private function OnRefreshDashBoard(){
-// 		global $_LOG;
-// 		$_LOG->log("###  Venta ACtual:: {$this->curSale}");
-		
-// 		foreach ($this->lastItems as $item){
-// 			$_LOG->log("###  Último item:: {$item["item"]}.  Cantidad:: {$item["quantity"]}");
-// 		}
-		
-	
-	}
+	private function OnRefreshDashBoard(){}
 	
 	private function call($action, $value=array()){
 		$proc = new bas_sql_myprocedure($action,$value);
@@ -222,8 +181,6 @@ class pos_step1 extends bas_frmx_form{
 	private function printTicket(){
 		$ticket = array();
 
-// 		$qry ="select item,description, concat(quantity,'x',price) as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
-// 		$qry ="select item, concat(quantity,'x',price) as quantity, lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
 		$qry ="select item, if(quantity <> 1,if (quantity <> -1,concat(quantity,'x',truncate(price,2)),\" \"),\" \") as quantity, truncate(lineAmount,2) as lineAmount from ticketLine where ticketNo ='{$this->lastTicket}'";
 		$ds = new bas_sql_myqrydataset($qry);
 		$rec = $ds->reset();
@@ -233,15 +190,13 @@ class pos_step1 extends bas_frmx_form{
 		}	
 		$ds->close();
 		
-		
-		global $_LOG;
-// 		$_LOG->debug("Valor del ticket",$ticket);
-		
 		$printer = new pos_ticketPrinter();
 		
-// 		$temp[] = array("data"=>"PEPEPEPEPEPE");
-// 		$printer->insertBlocK("temp",$temp,"condensed","alignCenter");
-// 		$printer->configBlock("temp","data",1,1,"underscore,bold","none",25);	
+		
+		$ticketNo[] = array("caption"=>"\nNo Ticket:","ticket"=>$this->lastTicket);
+		$printer->insertBlocK("ticketNo",$ticketNo);
+		$printer->configBlock("ticketNo","caption",1,1,"none","left",12);
+		$printer->configBlock("ticketNo","ticket",2,1,"none","left",-1);
 		
 		$header[] = array("item"=>"Producto","quantity"=>"Cantidad","lineAmount"=>"Total");
 		$printer->insertBlocK("header",$header);
@@ -258,8 +213,6 @@ class pos_step1 extends bas_frmx_form{
 		
 		$printer->charSeparator();
 		
-// 		select discountAmount as discount, VATAmount as VAT, totalAmount as total from ticket limit 6;
-
 		$qry = "select discountAmount as discount, VATAmount as VAT, totalAmount as total from ticket where ticketNo='{$this->lastTicket}'";
 		$dataset= new bas_sql_myquery($qry);
 		
@@ -290,7 +243,7 @@ class pos_step1 extends bas_frmx_form{
 		$printer->setHeader($dataset->result['header'],"default","alignCenter","none","heavy");		
 		$printer->setFooter($dataset->result['footer'],"default","alignCenter","none","huge");
 		
-// 		$printer->printTicket();
+		$printer->printTicket();
 		
 // 		$text = $printer->textOnly();
 // 		$msg= new bas_html_messageBox(false, 'Ticket',$text);
@@ -324,7 +277,7 @@ class pos_step1 extends bas_frmx_form{
 		$price = $dataset->result['price'];
 		$quantity = intval(($this->quantity)*intval($this->signo));
 		
-		$this->display->addItem($data['item'],$quantity,$price*$quantity);
+		$this->display->addItem($item,$quantity,$price*$quantity);
 	}
 
 	public function OnAction($action, $data=""){
