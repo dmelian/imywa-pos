@@ -7,6 +7,7 @@ class pos_step1 extends bas_frmx_form{
 	private $lastItems=array();
 	private $lastTicket;
 	private $actionDisplay;
+	private $display;
 	
 	public function OnLoad(){
 		parent::OnLoad();
@@ -54,12 +55,24 @@ class pos_step1 extends bas_frmx_form{
 			$quantities->addComponent(1,$ind,$ind-1,$ind-1);
 		}
 		
-		$qry = "select saleNo from sale where state <> 'deleted' and state <>'paid'order by saleNo DESC limit 1";
+		
+		$qry = "select saleNo,saleAmount from sale where state <> 'deleted' and state <>'paid'order by saleNo DESC limit 1";
 		$dataset= new bas_sql_myquery($qry);
 		
 		$this->curSale = $dataset->result['saleNo'];
 		
+		$qry = "select item,quantity, price from saleLine where saleNo={$this->curSale} order by lineNo DESC limit 3;";
+		$ds = new bas_sql_myqrydataset($qry);
 		
+		$lastItems=array();
+		$rec = $ds->reset();
+		while ($rec){ 
+			$lastItems[] = $rec;
+			$rec = $ds->next();			
+		}	
+		$ds->close();
+		
+		$this->display = new pos_display($this->curSale,$dataset->result['saleAmount'],$lastItems);
 		
 // 		$actions= new bas_frmx_panelGrid("action",array('width'=>1,'height'=>3));
 // 		$actions->setEvent("actions_event");
@@ -169,12 +182,12 @@ class pos_step1 extends bas_frmx_form{
 	}
 	
 	private function OnRefreshDashBoard(){
-		global $_LOG;
-		$_LOG->log("###  Venta ACtual:: {$this->curSale}");
+// 		global $_LOG;
+// 		$_LOG->log("###  Venta ACtual:: {$this->curSale}");
 		
-		foreach ($this->lastItems as $item){
-			$_LOG->log("###  Último item:: {$item["item"]}.  Cantidad:: {$item["quantity"]}");
-		}
+// 		foreach ($this->lastItems as $item){
+// 			$_LOG->log("###  Último item:: {$item["item"]}.  Cantidad:: {$item["quantity"]}");
+// 		}
 		
 	
 	}
@@ -202,6 +215,7 @@ class pos_step1 extends bas_frmx_form{
 		else{
 			$this->frames["buttons"]->getObjComponent("item")->setAttrId($item,"subItem",$value);
 		}
+		$this->addItem($item);
 	}
 	
 	
@@ -276,7 +290,7 @@ class pos_step1 extends bas_frmx_form{
 		$printer->setHeader($dataset->result['header'],"default","alignCenter","none","heavy");		
 		$printer->setFooter($dataset->result['footer'],"default","alignCenter","none","huge");
 		
-		$printer->printTicket();
+// 		$printer->printTicket();
 		
 // 		$text = $printer->textOnly();
 // 		$msg= new bas_html_messageBox(false, 'Ticket',$text);
@@ -296,22 +310,21 @@ class pos_step1 extends bas_frmx_form{
 			$rec = $ds->next();			
 		}	
 		$ds->close();
+		
 	}
 
 	
 	public function sendButton(){
-		global $_LOG;
-		ob_start();
-		$this->actionDisplay->OnPaint();
-		$html = ob_get_contents();
-		ob_end_clean();
-		$html = addcslashes($html,'"\\/');//addcslashes($html,'"');
-// 		$html=json_decode($html);
-
-		echo '{"command":"reload","selector":".buttonDisplay","content":"'.$html.'"}';
+		$this->display->printDisplay($this->actionDisplay);
+	}
+	
+	private function addItem($item){
+		$qry = "select price from item where item = '$item'";
+		$dataset= new bas_sql_myquery($qry);					
+		$price = $dataset->result['price'];
+		$quantity = intval(($this->quantity)*intval($this->signo));
 		
-// 		$msg= new bas_html_messageBox(false, 'Item!!',$html);//json_last_error());
-// 		echo $msg->jscommand();
+		$this->display->addItem($data['item'],$quantity,$price*$quantity);
 	}
 
 	public function OnAction($action, $data=""){
@@ -328,16 +341,12 @@ class pos_step1 extends bas_frmx_form{
 				$this->OnPaint("jscommand");
 				break;
 			case 'select_item': 
-// 				$msg= new bas_html_messageBox(false, 'Item!!',$data["item"]);
-// 				echo $msg->jscommand();
-				
 				$proc = new bas_sql_myprocedure('insert_item', array( $data['item'],( intval($this->quantity)*intval($this->signo) )  ));
 	
 				if ($proc->success){ // Elemento insertado en la venta actual.
 					// Actualizamos el display.
 					$this->pushSubItems($data['item'],$proc->errormsg);
 					$this->OnPaint("jscommand");
-					$this->lastItems[] = array("item"=>$data['item'],"quantity"=>intval(($this->quantity)*intval($this->signo)) );
                 }
                 else{
 					// se ha producido un error en la inserción.
@@ -349,8 +358,6 @@ class pos_step1 extends bas_frmx_form{
 			
 				break;
 			case 'select_group':
-// 				$this->frames["buttons"]->getObjComponent("item")->query->setfilter($data["item"],"itemGroup");
-// 				$this->frames["buttons"]->getObjComponent("item")->Reload();
 				$this->frames["buttons"]->getObjComponent("item")->setQuery($this->buildQuery(array("itemGroup"=>$data["item"])));
 				$this->lookupSubItems($data["item"]);
 				$this->OnPaint("jscommand");
@@ -364,8 +371,6 @@ class pos_step1 extends bas_frmx_form{
 			case 'num_items':
 				if ($data["item"] == "-") $this->signo = $this->signo * -1;
 				else	$this->quantity= $data["item"];
-// 				$msg= new bas_html_messageBox(false, 'Item!!',$data["item"]);
-// 				echo $msg->jscommand();
 			break;
 			 
 		}
