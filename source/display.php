@@ -13,6 +13,13 @@ class pos_display{
 		}
     }
     
+    public function getContent($actions){
+		$ret = array();
+		$ret[".buttonDisplay"] = $this->actionsContent($actions);
+		$ret[".saleDisplay"] = $this->displayContent();
+		return $ret;
+    }
+    
     
     public function printDisplay($actions){
     
@@ -40,7 +47,7 @@ class pos_display{
 			$actionsGrid->OnPaint();
 			$html = ob_get_contents();
 		ob_end_clean();
-		$html = addcslashes($html,'"\\/');
+// 		$html = addcslashes($html,'"\\/');
 		return $html;
     }
     

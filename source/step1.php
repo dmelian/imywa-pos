@@ -61,10 +61,10 @@ class pos_step1 extends bas_frmx_form{
 		// id,obj,y,x,width,height
 		$frame= new bas_frmx_gridFrame("buttons", array("POS"),array('width'=>10,'height'=>8));
 		$frame->addComponent("group",$groups	,1,1, 1,7);
-		$frame->addComponent("item"	,$items		,1,2, 7,7);
+		$frame->addComponent("item"	,$items		,1,2, 9,7);
 		
 // 		$frame->addComponent("action"	,$actions,5,9, 2,4);
-		$frame->addComponent("qty"	,$quantities,8,1, 8,1);
+		$frame->addComponent("qty"	,$quantities,8,1, 10,1);
 		
 // 		$frame->setHeader("Prueba de header");
 		
@@ -75,6 +75,9 @@ class pos_step1 extends bas_frmx_form{
 		if ($this->curSale != null)$this->lookupSubItems('g2');
 	}
 	
+	protected function getCustomContent(){
+		return $this->display->getContent($this->actionDisplay);
+	}
 	
 	private function buildActionGrid(){
 		$location= $this->call('action_display');
@@ -89,7 +92,7 @@ class pos_step1 extends bas_frmx_form{
 			$ind++;
 		}
 		
-		$this->frames["buttons"]->addComponent("action"	,$actions,5,9, 2,4);
+// 		$this->frames["buttons"]->addComponent("action"	,$actions,5,9, 2,4);
 		$this->actionDisplay=$actions;
 	}
 	
@@ -268,7 +271,7 @@ class pos_step1 extends bas_frmx_form{
 
 	
 	public function sendButton(){
-		$this->display->printDisplay($this->actionDisplay);
+// 		$this->display->printDisplay($this->actionDisplay);
 	}
 	
 	private function addItem($item){
@@ -317,8 +320,8 @@ class pos_step1 extends bas_frmx_form{
 				break;
 			case 'actions_event':
 				$this->make_action($data["item"]);
-				$this->sendButton();
-// 				$this->OnPaint("jscommand");
+// 				$this->sendButton();
+				$this->OnPaint("jscommand");
 
 			break;
 			case 'num_items':
