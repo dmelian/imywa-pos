@@ -20,12 +20,15 @@ class pos_step1 extends bas_frmx_form{
 		
 		$groups->mainField="item";
 		$groups->setEvent("select_group");
+		$groups->setGnralClass("menuPOS");
 		$groups->setQuery($this->buildQuery(array("itemGroup"=>"main")));
 		
 		$items= new bas_frmx_panelGridQuery("item",array('width'=>4,'height'=>5));
 
 		$items->mainField="item";
 		$items->setEvent("select_item");
+		$items->setGnralClass("itemPOS");
+
 		$items->setQuery($this->buildQuery(array("itemGroup"=>"g2")));
 		
 // 		$items->setRecord();
@@ -86,7 +89,7 @@ class pos_step1 extends bas_frmx_form{
 		
 		$actions= new bas_frmx_panelGrid("action",array('width'=>1,'height'=>3));
 		$actions->setEvent("actions_event");
-		
+		$actions->setGnralClass("actionPOS");
 		foreach($location as $item){
 			if ($item != "empty")$actions->addComponent($ind,1,$item,$item);
 			$ind++;
@@ -150,7 +153,10 @@ class pos_step1 extends bas_frmx_form{
 		
 		}
 		$this->buildActionGrid();
-	}
+// select totalAmount,sale.saleNo,saleVersion.ticketNo,sale.discountAmount,sale.saleAmount,sale.typePayment from saleVersion inner join sale on sale.saleNo=saleVersion.saleNo inner join ticket on ticket.ticketNo = saleVersion.ticketNo where sale.workDay ='2013-07-18' and action='paid' group by sale.workDay,sale.saleNo,action  order by version DESC;
+// select sum(totalAmount),sale.saleNo,saleVersion.ticketNo,sale.discountAmount,sale.saleAmount,sale.typePayment from saleVersion inner join sale on sale.saleNo=saleVersion.saleNo inner join ticket on ticket.ticketNo = saleVersion.ticketNo where sale.workDay ='2013-07-18' and action='paid' group by sale.workDay,typePayment order by version DESC;
+
+}
 	
 	private function OnRefreshDashBoard(){}
 	
