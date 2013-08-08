@@ -49,6 +49,7 @@ create procedure insert_item(
 	
 	select workDay into iworkday from pos;
 	
+	
 	if iworkday is null then
 		select 1 as error, 'No ha realizado la apertura del día' as message, 'generic_err03' as idMessage;
 	else
@@ -70,17 +71,27 @@ create procedure insert_item(
 -- 			update sale set saleAmount = saleAmount+(iprice*iquantity) and discountAmount= discountAmount+ *idiscountAmount+(iprice*iquantity)where saleNo=isaleNo;
 			update sale set saleAmount = round(saleAmount+(iprice*iquantity),2) where saleNo=isaleNo;
 			
-			insert into saleLine (workDay,saleNo,version,lineNo,creationTime,item,quantity,price,listPrice)
-				values (iworkday,isaleNo,iversion,ilineNo,now(),iitem,iquantity,iprice,iprice);
-			
 			select sum(quantity) into iquantityAmount from saleLine where saleNo = isaleNo and item=iitem group by item;
+
+			if iquantityAmount is null then
+				set iquantityAmount=0;
+			end if;
+			
+			if (iquantityAmount< (iquantity*-1)) then
+				set iquantityAmount =  (-1*iquantity) - iquantityAmount;
+				set iquantity = iquantity + iquantityAmount;
+				set iquantityAmount = 0;
+			else
+				set iquantityAmount =  iquantity + iquantityAmount;
+			end if;
+			
+			insert into saleLine (workDay,saleNo,version,lineNo,creationTime,item,quantity,price,listPrice)
+					values (iworkday,isaleNo,iversion,ilineNo,now(),iitem,iquantity,iprice,iprice);
 			
 			select 0 as error, "$_quantityAmount" as message,iquantityAmount as quantityAmount;
 		end if;
 	end if;
 end$$
-
-
 -- select item, sum(quantity),sum(price) from saleLine where saleNo=0 group by item having sum(quantity) > 0;
 
 

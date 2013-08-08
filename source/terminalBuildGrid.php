@@ -3,6 +3,7 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 
 	protected $curSale;
 	protected $currentApp;
+	protected $cssClass = array("groups"=>"menuPOS","items"=>"itemPOS","quantity"=>"numPOS","actions"=>"actionPOS");
 	
 	// #display contiene un objeto Display, que gestiona la construcción del display. # actionDisplay es un objeto Grid, que establece las acciones a mostrar y su colocación.
 	protected $actionDisplay;		protected $display;
@@ -39,7 +40,7 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 
 		$items->mainField="item";
 		$items->setEvent("select_item");
-		$items->setGnralClass("itemPOS");
+		$items->setGnralClass($this->cssClass["items"]);
 
 		$items->setQuery($this->buildQuery(array("itemGroup"=>$this->activeGroup)));
 		return $items;
@@ -50,7 +51,7 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 		
 		$groups->mainField="item";
 		$groups->setEvent("select_group");
-		$groups->setGnralClass("menuPOS");
+		$groups->setGnralClass($this->cssClass["groups"]);
 		$groups->setQuery($this->buildQuery(array("itemGroup"=>"main")));
 		return $groups;
 	}
@@ -58,11 +59,13 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 	protected function buildQuantityGrid(){
 		$quantities= new bas_frmx_panelGrid("items",array('width'=>10,'height'=>1));
 		$quantities->setEvent("num_items");
-		
+		$quantities->setGnralClass($this->cssClass["quantity"]);
+
 		$quantities->addComponent(1,1,"-","-");
 		for ($ind=2; $ind<11;$ind++){
 			$quantities->addComponent(1,$ind,$ind-1,$ind-1);
 		}
+		$quantities->setAttrId("-","itemClass","empty");
 		return $quantities;
 	}
 
@@ -74,7 +77,7 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 		
 		$actions= new bas_frmx_panelGrid("action",array('width'=>1,'height'=>3));
 		$actions->setEvent("actions_event");
-		$actions->setGnralClass("actionPOS");
+		$actions->setGnralClass($this->cssClass["actions"]);
 		foreach($location as $item){
 			if ($item != "empty")$actions->addComponent($ind,1,$item,$item);
 			$ind++;

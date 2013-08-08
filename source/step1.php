@@ -29,7 +29,8 @@ class pos_step1 extends pos_terminalBuildGrid{
 		$this->buildActionGrid();
 		
 		if ($this->curSale != null)$this->setSupItems($this->activeGroup);
-		$this->frames["buttons"]->getObjComponent("group")->setAttrId($this->activeGroup,"itemClass","select_itemPOS");
+		$this->setClass("group",$this->activeGroup,"select_".$this->cssClass["groups"]);
+		$this->setClass("qty",$this->quantity,"select_".$this->cssClass["quantity"]);
 	}
 	
 	protected function getCustomContent(){ // Funcion virtual del form base. Nos permite añadir contenido al OnPaint(jscommand). Le añadimos el refresco del display.
@@ -100,10 +101,12 @@ class pos_step1 extends pos_terminalBuildGrid{
 	protected function pushSubItems($item,$value,$userSelected=false){
 		if ($value == "0") {
 			$this->frames["buttons"]->getObjComponent("item")->setAttrId($item,"subItem","");
+			$this->frames["buttons"]->getObjComponent("item")->setAttrId($item,"itemClass",$this->cssClass["items"]);	
+
 		}
 		else{
 			$this->frames["buttons"]->getObjComponent("item")->setAttrId($item,"subItem",$value);
-			$this->frames["buttons"]->getObjComponent("item")->setAttrId($item,"itemClass","select_itemPOS");	
+			$this->frames["buttons"]->getObjComponent("item")->setAttrId($item,"itemClass","select_".$this->cssClass["items"]);	
 		}
 		if ($userSelected) $this->addItemToDisplay($item);
 	}
@@ -128,17 +131,18 @@ class pos_step1 extends pos_terminalBuildGrid{
 		$this->display->addItem($item,$quantity,$price*$quantity);
 	}
 
+	protected function setClass($grid,$id,$class){
+		$this->frames["buttons"]->getObjComponent($grid)->setAttrId($id,"itemClass",$class);
+	}
+
 	public function OnAction($action, $data=""){
 		global $_LOG;
 		$_LOG->debug("Evento enviado!!! $action",$data);
 		switch($action){
 			case 'close': return array('close');
-			case 'edit':
-
-				break;
 			case 'prevGrid':case 'nextGrid':
 				$this->frames[$data["idFrame"]]->OnAction($action,$data);
-				$this->frames["buttons"]->getObjComponent("group")->setAttrId($this->activeGroup,"itemClass","select_itemPOS");
+				$this->setClass("group",$this->activeGroup,"select_".$this->cssClass["groups"]);
 
 				$this->OnPaint("jscommand");
 				break;
@@ -155,15 +159,16 @@ class pos_step1 extends pos_terminalBuildGrid{
                     $msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
                     echo $msg->jscommand();
                 }             
-                
-                $this->quantity = $this->signo;
-			
+                $this->setClass("qty",$this->quantity,"");
+				$this->quantity= 1;
+				$this->setClass("qty",$this->quantity,"select_".$this->cssClass["quantity"]);
 				break;
 			case 'select_group':
 				$this->frames["buttons"]->getObjComponent("item")->setQuery($this->buildQuery(array("itemGroup"=>$data["item"])));
 
-				$this->frames["buttons"]->getObjComponent("group")->setAttrId($this->activeGroup,"itemClass","");
-				$this->frames["buttons"]->getObjComponent("group")->setAttrId($data["item"],"itemClass","select_itemPOS");
+				$this->setClass("group",$this->activeGroup,"");
+				$this->setClass("group",$data["item"],"select_".$this->cssClass["groups"]);
+
 				$this->activeGroup = $data["item"];
 
 				$this->setSupItems($data["item"]);
@@ -176,13 +181,22 @@ class pos_step1 extends pos_terminalBuildGrid{
 
 			break;
 			case 'num_items':
-				if ($data["item"] == "-") $this->signo = $this->signo * -1;
-				else	$this->quantity= $data["item"];
+				if ($data["item"] == "-") {
+					$this->signo = $this->signo * -1;
+					if($this->signo < 0)	$this->setClass("qty",'-',"select_".$this->cssClass["items"]);
+					else	$this->setClass("qty",'-',"empty");
+
+				}
+				else{
+					$this->setClass("qty",$this->quantity,"");
+					$this->quantity= $data["item"];
+					$this->setClass("qty",$this->quantity,"select_".$this->cssClass["quantity"]);
+				}
+				$this->OnPaint("jscommand");
 			break;
 			default:
 				if ($ret = parent::OnAction($action,$data)) return $ret;
 			break;
 		}
-// 		$this->OnRefreshDashBoard();
 	}
 }
