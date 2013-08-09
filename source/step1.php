@@ -37,7 +37,7 @@ class pos_step1 extends pos_terminalBuildGrid{
 		return $this->display->getContent($this->actionDisplay);
 	}
 		
-	protected function make_action($action){
+	protected function make_action($action,$data){
 		switch ($action){
 			case 'bill':
 				$out = $this->call("sale_bill");
@@ -135,6 +135,27 @@ class pos_step1 extends pos_terminalBuildGrid{
 		$this->frames["buttons"]->getObjComponent($grid)->setAttrId($id,"itemClass",$class);
 	}
 
+	protected function showGetTypePayment(){
+		global $_LOG;
+		$_LOG->debug("Entramos en el type",array());
+		$typeGrid = new bas_sqlx_querydef();
+        
+        $typeGrid= new bas_frmx_panelGrid("items",array('width'=>2,'height'=>1));
+		$typeGrid->setEvent("typePayment");
+// 		$typeGrid->setGnralClass($this->cssClass["quantity"]);
+
+		$typeGrid->addComponent(1,1,"-","-");
+		$typeGrid->addComponent(1,2,"-","-");
+        
+        
+        
+		$save[] =  array('id'=> "setfilterRecord", 'type'=>'command', 'caption'=>"Aceptar", 'description'=>"guardar");
+		$save[] =  array('id'=> "cancel", 'type'=>'command', 'caption'=>"cancelar", 'description'=>"Cancelar");
+        
+        $box = new  bas_html_frameBox($typeGrid,"Prueba",array());
+        echo $box->jscommand();
+	}
+	
 	public function OnAction($action, $data=""){
 		global $_LOG;
 		$_LOG->debug("Evento enviado!!! $action",$data);
@@ -175,9 +196,15 @@ class pos_step1 extends pos_terminalBuildGrid{
 				$this->OnPaint("jscommand");
 				break;
 			case 'actions_event':
-				$this->make_action($data["item"]);
-// 				$this->sendButton();
-				$this->OnPaint("jscommand");
+// 				if ($data["item"] == "paid"){
+// 					$this->showGetTypePayment();
+// 				}
+// 				else {
+// 					$this->make_action($data["item"]);
+// 					$this->OnPaint("jscommand");
+// 				}
+				$_LOG->debug("Se llegaaaa",$data);
+				$this->showGetTypePayment();
 
 			break;
 			case 'num_items':

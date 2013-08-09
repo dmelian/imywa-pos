@@ -31,6 +31,13 @@ class pos_start extends bas_frmx_form{
 		
 	}
 	
+	protected function getCustomContent(){ // Funcion virtual del form base. Nos permite añadir contenido al OnPaint(jscommand). Le añadimos el refresco del display.
+		$ret = array();
+		$ret[".buttonDisplay"] ="";
+		$ret[".saleDisplay"] = "";
+		return $ret;
+	}
+	
 	public function OnAction($action, $data){
 		if ($ret = parent::OnAction($action,$data)) return $ret;
 		switch ($action){
