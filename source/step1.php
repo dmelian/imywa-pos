@@ -37,7 +37,10 @@ class pos_step1 extends pos_terminalBuildGrid{
 		return $this->display->getContent($this->actionDisplay);
 	}
 		
-	protected function make_action($action,$data){
+	protected function make_action($action,$data=array()){
+		global $_LOG;
+		$_LOG->debug("Accion realizada!!! $action",$data);
+		$ret = "";
 		switch ($action){
 			case 'bill':
 				$out = $this->call("sale_bill");
@@ -69,7 +72,7 @@ class pos_step1 extends pos_terminalBuildGrid{
 				}
 			break;
 			case 'pay':
-				$this->call("sale_pay",array("cash",500));
+				$ret = $this->call("sale_pay",array($data["type"],$data["quantity"]));
 			break;
 			case 'delete':
 				$this->call("sale_delete");
@@ -79,6 +82,7 @@ class pos_step1 extends pos_terminalBuildGrid{
 		
 		}
 		$this->buildActionGrid();
+		return $ret;
 // select totalAmount,sale.saleNo,saleVersion.ticketNo,sale.discountAmount,sale.saleAmount,sale.typePayment from saleVersion inner join sale on sale.saleNo=saleVersion.saleNo inner join ticket on ticket.ticketNo = saleVersion.ticketNo where sale.workDay ='2013-07-18' and action='paid' group by sale.workDay,sale.saleNo,action  order by version DESC;
 // select sum(totalAmount),sale.saleNo,saleVersion.ticketNo,sale.discountAmount,sale.saleAmount,sale.typePayment from saleVersion inner join sale on sale.saleNo=saleVersion.saleNo inner join ticket on ticket.ticketNo = saleVersion.ticketNo where sale.workDay ='2013-07-18' and action='paid' group by sale.workDay,typePayment order by version DESC;
 
@@ -136,16 +140,14 @@ class pos_step1 extends pos_terminalBuildGrid{
 	}
 
 	protected function showGetTypePayment(){
-		global $_LOG;
-		$_LOG->debug("Entramos en el type",array());
 		$typeGrid = new bas_sqlx_querydef();
         
         $typeGrid= new bas_frmx_panelGrid("items",array('width'=>2,'height'=>1));
 		$typeGrid->setEvent("typePayment");
 // 		$typeGrid->setGnralClass($this->cssClass["quantity"]);
 
-		$typeGrid->addComponent(1,1,"-","-");
-		$typeGrid->addComponent(1,2,"-","-");
+		$typeGrid->addComponent(1,1,"creditCard","Tarjeta de crédito");
+		$typeGrid->addComponent(1,2,"cash","Efectivo");
         
         
         
@@ -154,6 +156,18 @@ class pos_step1 extends pos_terminalBuildGrid{
         
         $box = new  bas_html_frameBox($typeGrid,"Prueba",array());
         echo $box->jscommand();
+	}
+	
+	protected function showGetCash(){
+		global $_LOG;
+		$_LOG->debug("Entramos!!",array());
+		$query = new bas_sqlx_querydef();
+        $query->addcol('quantity','Cantidad', 'temp',true);
+        
+        $save[] =  array('id'=> "insertCash", 'type'=>'command', 'caption'=>"Aceptar", 'description'=>"guardar");
+		
+		$cash= new bas_html_filterBox($query, "Cantidad_entregada",$save);
+		echo $cash->jscommand();
 	}
 	
 	public function OnAction($action, $data=""){
@@ -196,15 +210,38 @@ class pos_step1 extends pos_terminalBuildGrid{
 				$this->OnPaint("jscommand");
 				break;
 			case 'actions_event':
-// 				if ($data["item"] == "paid"){
+				switch ($data["item"]){
+					case "pay":
+						$this->showGetTypePayment();
+						
+					break;
+					case "priceView":
+						if ($this->modeView){
+							$this->actionDisplay->setAttrId("priceView","itemClass","");
+							$this->modeView=false;
+						}
+						else {
+							$this->actionDisplay->setAttrId("priceView","itemClass","select_".$this->cssClass["items"]);
+							$this->modeView=true;							
+						}
+						$this->OnPaint("jscommand");
+						
+					break;
+					default:
+						$this->modeView=false;
+						$this->make_action($data["item"]);
+						$this->OnPaint("jscommand");
+					break;
+				}
+			
+// 				if ($data["item"] == "pay"){
 // 					$this->showGetTypePayment();
 // 				}
 // 				else {
 // 					$this->make_action($data["item"]);
 // 					$this->OnPaint("jscommand");
 // 				}
-				$_LOG->debug("Se llegaaaa",$data);
-				$this->showGetTypePayment();
+
 
 			break;
 			case 'num_items':
@@ -221,8 +258,23 @@ class pos_step1 extends pos_terminalBuildGrid{
 				}
 				$this->OnPaint("jscommand");
 			break;
+			case 'typePayment':
+				if ($data["item"] == "creditCard"){
+					 if ($this->make_action("pay",array("type"=>$data["item"],"quantity"=>'null')) != "error")$this->OnPaint("jscommand");
+				}
+				else{
+					$this->showGetCash();
+// 					$this->make_action("pay",array("type"=>$data["item"],"quantity"=>'200'));
+// 					$this->OnPaint("jscommand");
+				}
+			break;
+			case 'insertCash':
+				if ($this->make_action("pay",array("type"=>"cash","quantity"=>$data["quantity"])) != "error")$this->OnPaint("jscommand");
+// 				else echo '{"command": "void"}';
+			break;
 			default:
 				if ($ret = parent::OnAction($action,$data)) return $ret;
+				else echo '{"command": "void"}';
 			break;
 		}
 	}

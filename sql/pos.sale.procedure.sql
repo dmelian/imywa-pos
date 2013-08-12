@@ -143,7 +143,7 @@ begin
 		select ticketNo into iticket from saleVersion where saleNo=isaleNo and version=iversion;
 		select totalAmount into itotalSale from ticket where ticketNo=iticket;
 
-		if ichargedAmount is null then
+		if( ichargedAmount is null)  or (itypePayment = 'creditCard') then
 -- 			select saleAmount into ichargedAmount from sale where workDay=iworkday and saleNo=isaleNo;
 			set ichargedAmount = itotalSale;
 		end if;

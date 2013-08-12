@@ -9,6 +9,8 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 	protected $actionDisplay;		protected $display;
 	
 	protected $activeGroup="g2";
+	protected $modeView = false;
+
 	
 	public function OnLoad(){
 		parent::OnLoad();
@@ -82,7 +84,7 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 			if ($item != "empty")$actions->addComponent($ind,1,$item,$item);
 			$ind++;
 		}
-		
+		if ($this->modeView)$actions->setAttrId("priceView","itemClass","select_".$this->cssClass["items"]);
 // 		$this->frames["buttons"]->addComponent("action"	,$actions,5,9, 2,4);
 		$this->actionDisplay=$actions;
 	}
