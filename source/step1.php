@@ -37,6 +37,17 @@ class pos_step1 extends pos_terminalBuildGrid{
 		return $this->display->getContent($this->actionDisplay);
 	}
 		
+	protected function clearGrid($grid){
+		$height = $this->frames["buttons"]->getObjComponent($grid)->grid["height"];
+		$width = $this->frames["buttons"]->getObjComponent($grid)->grid["width"];
+
+		for ($row=1; $row <= $height; $row++){
+			for ($column=1; $column <= $width; $column++){
+				$this->frames["buttons"]->getObjComponent($grid)->setAttrPos($column,$row,"subItem","");
+				$this->frames["buttons"]->getObjComponent($grid)->setAttrPos($column,$row,"itemClass","");
+			}
+		}
+	}
 	protected function make_action($action,$data=array()){
 		global $_LOG;
 		$_LOG->debug("Accion realizada!!! $action",$data);
@@ -54,9 +65,11 @@ class pos_step1 extends pos_terminalBuildGrid{
 				$out = $this->call("sale_new");
 				if ($out != "error") {
 					$this->curSale = $out;
+					$this->display->setSale($this->curSale);
+					$this->display->clearItem();
+					$this->clearGrid("item");
 				}
 			break;
-			
 			case 'ticket':
 				$out = $this->call("sale_bill");
 				if ($out != "error") {
@@ -78,8 +91,7 @@ class pos_step1 extends pos_terminalBuildGrid{
 				$this->call("sale_delete");
 			break;
 			default:
-				
-		
+			break;		
 		}
 		$this->buildActionGrid();
 		return $ret;
@@ -182,21 +194,34 @@ class pos_step1 extends pos_terminalBuildGrid{
 				$this->OnPaint("jscommand");
 				break;
 			case 'select_item': 
-				$proc = new bas_sql_myprocedure('insert_item', array( $data['item'],( intval($this->quantity)*intval($this->signo) )  ));
-	
-				if ($proc->success){ // Elemento insertado en la venta actual.
-					// Actualizamos el display.
-					$this->pushSubItems($data['item'],$proc->errormsg,1);
-					$this->OnPaint("jscommand");
-                }
-                else{
-					// se ha producido un error en la inserción.
-                    $msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
+				if ($this->modeView)
+				{
+					$qry = "select price, description from item where item = '{$data['item']}'";
+					$dataset= new bas_sql_myquery($qry);					
+					
+					$msg= new bas_html_messageBox(false, $dataset->result['description'], $dataset->result['price']."€");
                     echo $msg->jscommand();
-                }             
-                $this->setClass("qty",$this->quantity,"");
-				$this->quantity= 1;
-				$this->setClass("qty",$this->quantity,"select_".$this->cssClass["quantity"]);
+                    
+					$this->modeView = false; //### No se puede mostrar el dialog y cambiar el color a la vez..
+					$this->actionDisplay->setAttrId("priceView","itemClass","");
+				}
+				else{
+					$proc = new bas_sql_myprocedure('insert_item', array( $data['item'],( intval($this->quantity)*intval($this->signo) )  ));
+		
+					if ($proc->success){ // Elemento insertado en la venta actual.
+						// Actualizamos el display.
+						$this->pushSubItems($data['item'],$proc->errormsg,1);
+						$this->OnPaint("jscommand");
+					}
+					else{
+						// se ha producido un error en la inserción.
+						$msg= new bas_html_messageBox(false, 'Atención.', $proc->errormsg);
+						echo $msg->jscommand();
+					}             
+					$this->setClass("qty",$this->quantity,"");
+					$this->quantity= 1;
+					$this->setClass("qty",$this->quantity,"select_".$this->cssClass["quantity"]);
+				}
 				break;
 			case 'select_group':
 				$this->frames["buttons"]->getObjComponent("item")->setQuery($this->buildQuery(array("itemGroup"=>$data["item"])));

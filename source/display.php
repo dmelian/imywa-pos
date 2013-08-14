@@ -84,8 +84,17 @@ class pos_display{
 	
 	public function addItem($item,$quantity,$price){
 		array_unshift($this->lastItems, array("item"=>$item,"quantity"=>$quantity,"price"=>$price));
-		array_splice($this->lastItems, count($this->lastItems)-1, 1);
+		if (count($this->lastItems)>3) array_splice($this->lastItems, count($this->lastItems)-1, 1);
 		$this->total += $price;
+	}
+	
+	public function clearItem(){
+		$this->lastItems = array();
+		$this->total  = 0;
+	}
+	
+	public function setSale($sale){
+		$this->lastSale = $sale;
 	}
 	
 	private function OnPaintItem($item,$quantity,$price){
