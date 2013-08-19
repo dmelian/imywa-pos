@@ -18,6 +18,7 @@ class pos_ticketPrinter{
 
     public function __construct($ip="192.168.33.48",$port="50000"){
 		$this->ip = $ip;
+		$this->port= $port;
 		$this->setConfig();
     }
 
