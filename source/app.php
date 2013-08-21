@@ -3,7 +3,7 @@ class pos_app extends bas_sysx_app{
     
     
 	public function OnPaintDashBoard(){
-		$out = "<h4>Administración de tareas (BETA) .</h4>";
+		$out = "<h4>Terminal Punto de Venta</h4>";
 		
 		$out .= $this->OnPaintDisplay();
 		return $out;
