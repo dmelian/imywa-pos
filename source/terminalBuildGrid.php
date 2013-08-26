@@ -18,7 +18,7 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 	}
 	
 	protected function createDisplay(){
-		$qry = "select saleNo,saleAmount from sale where state <> 'deleted' and state <>'paid'order by saleNo DESC limit 1";
+		$qry = "select saleNo,saleAmount from sale where state <> 'deleted' and state <>'paid' order by saleNo DESC limit 1";
 		$dataset= new bas_sql_myquery($qry);
 		
 		$this->curSale = $dataset->result['saleNo'];
@@ -85,7 +85,6 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 			$ind++;
 		}
 		if ($this->modeView)$actions->setAttrId("priceView","itemClass","select_".$this->cssClass["items"]);
-// 		$this->frames["buttons"]->addComponent("action"	,$actions,5,9, 2,4);
 		$this->actionDisplay=$actions;
 	}
 	
@@ -101,7 +100,4 @@ class pos_terminalBuildGrid extends pos_terminalHandleTicket{
 		return $query;
 	}
 
-	public function OnAction($action, $data=""){
-		return parent::OnAction($action,$data);
-	}
 }

@@ -18,8 +18,8 @@ class pos_step1 extends pos_terminalBuildGrid{
 		
 		// id,obj,y,x,width,height
 		$frame= new bas_frmx_gridFrame("buttons", array("POS"),array('width'=>10,'height'=>8));
-		$frame->addComponent("group",$groups	,1,1, 1,7);
-		$frame->addComponent("item"	,$items		,1,2, 9,7);
+		$frame->addComponent("group",$groups	,1,1, 2,7);
+		$frame->addComponent("item"	,$items		,1,3, 8,7);
 		
 		$frame->addComponent("qty"	,$quantities,8,1, 10,1);
 		

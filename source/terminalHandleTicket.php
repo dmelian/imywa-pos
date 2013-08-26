@@ -2,10 +2,6 @@
 class pos_terminalHandleTicket extends bas_frmx_form{
 	protected $curTicket;
 	
-	public function OnLoad(){
-		parent::OnLoad();
-	}
-	
 	protected function printTicket(){
 		$ticket = array();
 
@@ -73,16 +69,8 @@ class pos_terminalHandleTicket extends bas_frmx_form{
 		
 		$printer->printTicket();
 		
-// 		$text = $printer->textOnly();
-// 		$msg= new bas_html_messageBox(false, 'Ticket',$text);
-// 		echo $msg->jscommand();
-		
-// 		$printer->configBlock("ticket","item",4);
 		
 	}
 
 	
-	public function OnAction($action, $data=""){
-		return parent::OnAction($action,$data);
-	}
 }
