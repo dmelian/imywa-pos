@@ -343,7 +343,8 @@ class pos_ticketPrinter{
     
     private function printNow($filename){
 		chmod($filename, 0666);
-		$salida =  shell_exec("cat $filename | tcpconnect -i {$this->ip} {$this->port} 2>&1");
+		//$salida =  shell_exec("cat $filename | tcpconnect -i {$this->ip} {$this->port} 2>&1");
+		return null;
 		
 		if (!is_null($salida)) return " SE ha producido un error en la emisión. Asegúrece que la impresora está activa\n";
 		else return $salida;
@@ -414,15 +415,16 @@ class pos_ticketPrinter{
     	$lineBuffWidth= $width >> 3;
     	while ($currLine < $height){
     		$lineBuffHeight= $height - $currLine < $headDots ? $height - $currLine : $headDots;
-    		for ($line=0; $line < $lineBuffHeight; $line++) $lineBuff[$line]= fgets($pbmf, $lineBuffWidth);
+    		if (isset($lineBuff)) unset($lineBuff);
+    		for ($line=0; $line < $lineBuffHeight; $line++) $lineBuff[$line]= fread($pbmf, $lineBuffWidth);
     		
     		for ($pos= 0; $pos < $width; $pos++){
-    			$currHorzBit= "\x80" >> ($pos % 8);
-    			$currHorzByte= $pos / 8;
+    			$currHorzBit= 128 >> ($pos % 8);
+    			$currHorzByte= floor($pos / 8);
     			$currVertBit= 1;
     			$currVertNumber= 0;
     			for ($line= 0; $line < $lineBuffHeight; $line++){
-    				if ($currHorzBit & $lineBuff[$line][$currHorzByte]) $currVertNumber|= $currVertBit;
+    				if (ord(char($currHorzBit) & $lineBuff[$line][$currHorzByte])) $currVertNumber|= $currVertBit;
     				$currVertBit<<= 1;
     			} 
     		}
@@ -430,7 +432,44 @@ class pos_ticketPrinter{
     		
     		$currLine+= $lineBuffHeight;
 		}
-    	
+/*    	
+    	$out='';
+    	$currLine= 0;
+    	$lineBuffWidth= $width >> 3;
+    	$debug=array('width'=>$width, 'height'=>$height);
+    	$debug['lineBuffWidth']= $lineBuffWidth;
+    	while ($currLine < $height){
+    		$lineBuffHeight= $height - $currLine < $headDots ? $height - $currLine : $headDots;
+    		$debug['currLine']= $currLine;
+    		if (isset($lineBuff)) unset($lineBuff);
+    		for ($line=0; $line < $lineBuffHeight; $line++) $lineBuff[$line]= fread($pbmf, $lineBuffWidth);
+    		$debug['lineBuff']= $lineBuff;
+    		$_LOG->debug('line',$debug);
+
+    		for ($pos= 0; $pos < $width; $pos++){
+    			$currHorzBit= 128 >> ($pos % 8);
+    			$currHorzByte= floor($pos / 8);
+    			$currVertBit= 1;
+    			$currVertNumber= 0;
+    			$debug2=array('pos'=>$pos,'HorzBit'=>$currHorzBit,'HorzByte'=>$currHorzByte);
+    			for ($line= 0; $line < $lineBuffHeight; $line++){
+    				
+    				if (ord(chr($currHorzBit) & $lineBuff[$line][$currHorzByte])) $currVertNumber= $currVertNumber | $currVertBit;
+    				$debug2['linechar']= dechex(ord($lineBuff[$line][$currHorzByte]));
+    				$debug2['mask']= dechex(ord(chr($currHorzBit) & $lineBuff[$line][$currHorzByte]));
+    				$debug2['VertBit']=$currVertBit;
+    				$debug2['VertNumber']=$currVertNumber;
+    				$_LOG->debug('step',$debug2);
+    				
+    				$currVertBit<<= 1;
+    			}
+    		}
+    		$out.= chr($currVertNumber);
+    		$_LOG->debug('out',$out);
+    		
+    		$currLine+= $lineBuffHeight;
+    	}
+*/    	 
     	fclose($pbmf);
 		$this->insertDirectBlock($out);
     }
@@ -444,7 +483,7 @@ class pos_ticketPrinter{
     }
     
     public function testCode(){
-    	$this->printPortableBitMap('./image/test-logo.pbm', 8);
+    	$this->printPortableBitMap('./image/test-logo1.pbm', 8);
     } 
     
     private function randomName($size,$prefix=""){
