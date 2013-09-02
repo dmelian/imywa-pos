@@ -16,7 +16,7 @@ class pos_ticketPrinter{
     protected $header=null;
     protected $footer=null;
 
-    public function __construct($ip="192.168.33.48",$port="50000"){
+    public function __construct($ip="192.168.33.7",$port="50000"){
 		$this->ip = $ip;
 		$this->port= $port;
 		$this->setConfig();
@@ -52,13 +52,17 @@ class pos_ticketPrinter{
     }
     
     
-    public function insertBlocK($id,$data,$typography="condensed",$align="alignLeft",$charSize="normal"){
-		if (!isset($this->blocks[$id])) $this->blocks[$id] = array("data"=>$data,"order"=>"","align"=>$align,"typography"=>$typography,"charSize"=>$charSize,"priority"=>"");
-		else{
+    public function insertBlocK($id,$data,$typography="condensed",$align="alignLeft",$charSize="normal", $type='normal'){
+    	if (!$id) do $id= $this->randomName(10); while (isset($this->blocks[$id]));
+    	
+		if (!isset($this->blocks[$id])) $this->blocks[$id] = array("data"=>$data,"order"=>"","align"=>$align,"typography"=>$typography,"charSize"=>$charSize,"priority"=>"",'type'=>$type);
+		else {
 			global $_LOG;
 			$_LOG->log("Ha intentado introducir dos bloques con el mismo identificador. POS::ticketPrinter::insertBloc");
 		}
     }
+    private function insertDirectBlock($text){ $this->insertBlock('', $text, 'condensed', 'left', 'normal', 'direct'); }
+    
     
     
     public function charSeparator($char="-"){
@@ -224,37 +228,53 @@ class pos_ticketPrinter{
     }
     
 	private function textBlock($id){
-		$out = "";
-		$typography = $this->blocks[$id]["typography"];
-		$alignBlock = $this->blocks[$id]["align"];
-		$out = $this->typography[$typography].$this->commands["standarMode"].$this->commands[$alignBlock];
-		$orderFields = $this->getOrderFieldByBlock($id);
-		global $_LOG;
-// 		$_LOG->debug("antes de la transformacion",$orderFields);
 		
-		$orderFields = $this->autoAjustSize($orderFields);
+		$blockType= isset($this->blocks[$id]['type']) ? $this->blocks[$id]['type'] : 'undefined';
 		
-// 		$_LOG->debug("Despues de la transformacion",$orderFields);
-
-		$data = $this->blocks[$id]["data"];
-// 		$_LOG->debug("Informacion del bloque ",$data);
-		foreach($data as $row){
-			$sep="";
-			$indField=0;
-			$numFields  = count($orderFields);
-			if ($numFields == 1){
-				$out .= $this->formatText($row[$orderFields[0]["field"]],strlen($row[$orderFields[0]["field"]]),$orderFields[0]["style"],$orderFields[0]["align"]);
-			}
-			else{
-				foreach($orderFields as $order){
-					$out .= $sep.$this->formatText($row[$order["field"]],$order["maxSize"],$order["style"],$order["align"]);
-					$sep = str_repeat(" ",$this->separation);
-	// 				$sep = $this->currentSeparation($indField,$numFields);
-					$indField++;
+		switch($blockType){
+		case 'normal':
+			
+			$out = "";
+			$typography = $this->blocks[$id]["typography"];
+			$alignBlock = $this->blocks[$id]["align"];
+			$out = $this->typography[$typography].$this->commands["standarMode"].$this->commands[$alignBlock];
+			$orderFields = $this->getOrderFieldByBlock($id);
+			global $_LOG;
+	// 		$_LOG->debug("antes de la transformacion",$orderFields);
+			
+			$orderFields = $this->autoAjustSize($orderFields);
+			
+	// 		$_LOG->debug("Despues de la transformacion",$orderFields);
+	
+			$data = $this->blocks[$id]["data"];
+	// 		$_LOG->debug("Informacion del bloque ",$data);
+			foreach($data as $row){
+				$sep="";
+				$indField=0;
+				$numFields  = count($orderFields);
+				if ($numFields == 1){
+					$out .= $this->formatText($row[$orderFields[0]["field"]],strlen($row[$orderFields[0]["field"]]),$orderFields[0]["style"],$orderFields[0]["align"]);
 				}
+				else{
+					foreach($orderFields as $order){
+						$out .= $sep.$this->formatText($row[$order["field"]],$order["maxSize"],$order["style"],$order["align"]);
+						$sep = str_repeat(" ",$this->separation);
+		// 				$sep = $this->currentSeparation($indField,$numFields);
+						$indField++;
+					}
+				}
+				$out.="\n";
 			}
-			$out.="\n";
+			break;
+			
+		case 'direct':
+			$out= "{$this->blocks[$id]['data']}\n";
+			break;
+			
+		default:
+			$out= "\n";
 		}
+		
 		return $out;
     }
     
@@ -284,7 +304,7 @@ class pos_ticketPrinter{
 		
 		if (isset($this->footer)) $out.= $this->textHeader($this->footer);
 		
-		$out .= $this->commands["cutPaper"];
+		//$out .= $this->commands["cutPaper"]; not at the moment.
 		
 		return $out;
     }
@@ -363,14 +383,56 @@ class pos_ticketPrinter{
     
     private function printBitMapSimple(){
 		$text = "\x1b*\x01\x00\x02";
-		//$text .="\xff\x81\x81\x81\x81\x81\x81\x81";
 		for($ind=0;$ind<63;$ind++)		$text .="\xff\x81\x81\x81\x81\x81\x81\xff";
 		$text .="\xff\xff\xff\xff\xff\xff\xff\xff";
-		//$text .="\x81\x81\x81\x81\x81\x81\x81\xff";
-// 		$text .= "\x1b*\x00\x08\x00\xff\x81\x81\x81\x81\x81\x81\xff \n";
-		
-		$text .= $this->commands["cutPaper"];
-		return $text;
+		$this->insertDirectBlock($text);
+    }
+    
+    private function printPortableBitMap($filename, $headDots){
+    	global $_LOG;
+    	
+    	$pbmf= fopen($filename, 'r');
+    	$magicNumber= chop(fgets($pbmf));
+    	if ($magicNumber != "P4") {
+    		$this->insertDirectBlock("invalid PBM format\n");
+    		fclose($pbmf);
+    		return;
+    	}
+    	
+    	$dimensions= chop(fgets($pbmf));
+    	//Ignore comments begining with #
+    	if (substr($dimensions,0,1) == '#') {
+    		$_LOG->debug("PBM comment found.", $dimensions);
+    		$dimensions= chop(fgets($pbmf));
+    	}
+    	list($width,$height) = explode(' ',$dimensions); 
+    	
+    	//$this->insertDirectBlock("($width x $height) PBM\n");
+    	
+    	$out='';
+    	$currLine= 0;
+    	$lineBuffWidth= $width >> 3;
+    	while ($currLine < $height){
+    		$lineBuffHeight= $height - $currLine < $headDots ? $height - $currLine : $headDots;
+    		for ($line=0; $line < $lineBuffHeight; $line++) $lineBuff[$line]= fgets($pbmf, $lineBuffWidth);
+    		
+    		for ($pos= 0; $pos < $width; $pos++){
+    			$currHorzBit= "\x80" >> ($pos % 8);
+    			$currHorzByte= $pos / 8;
+    			$currVertBit= 1;
+    			$currVertNumber= 0;
+    			for ($line= 0; $line < $lineBuffHeight; $line++){
+    				if ($currHorzBit & $lineBuff[$line][$currHorzByte]) $currVertNumber|= $currVertBit;
+    				$currVertBit<<= 1;
+    			} 
+    		}
+    		$out.= chr($currVertNumber);
+    		
+    		$currLine+= $lineBuffHeight;
+		}
+    	
+    	fclose($pbmf);
+		$this->insertDirectBlock($out);
     }
 
 	private function print_Emphasized(){
@@ -381,29 +443,8 @@ class pos_ticketPrinter{
 		return $text;
     }
     
-    public function main(){
-        $filename= $this->randomName(15,"ticket_");//"ticket.dat";
-        
-//         $text = $this->commands["rot90"]." Fijacion de espacios".$this->commands["rot90"]."  comoooooooo ".$this->commands["rot90"]."\n moooooolaaaaa \n estoooooo \n son 3.48  \x1dVA1";
-        $text = $this->print_Emphasized();
-
-        if ($file= fopen($filename,'w')){
-            fwrite($file,$text);
-            fclose($file);
-            
-            chmod($filename, 0666);
-            $salida =  shell_exec("cat $filename | tcpconnect -i {$this->ip} {$this->port} 2>&1");
-            
-            
-            if (!is_null($salida)) echo " SE ha producido un error en la emisión. Asegúrece que la impresora está activa\n";
-            else echo $salida;
-            
-            unlink($filename);
-            echo "\nHave a nice day.\n";
-        }
-        else{
-            echo "No ha podido acceder el fichero {$filename}.";
-        }   
+    public function testCode(){
+    	$this->printPortableBitMap('./image/test-logo.pbm', 8);
     } 
     
     private function randomName($size,$prefix=""){
