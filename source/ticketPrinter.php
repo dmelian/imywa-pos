@@ -343,8 +343,7 @@ class pos_ticketPrinter{
     
     private function printNow($filename){
 		chmod($filename, 0666);
-		//$salida =  shell_exec("cat $filename | tcpconnect -i {$this->ip} {$this->port} 2>&1");
-		return null;
+		$salida =  shell_exec("cat $filename | tcpconnect -i {$this->ip} {$this->port} 2>&1");
 		
 		if (!is_null($salida)) return " SE ha producido un error en la emisión. Asegúrece que la impresora está activa\n";
 		else return $salida;
@@ -389,9 +388,13 @@ class pos_ticketPrinter{
 		$this->insertDirectBlock($text);
     }
     
-    private function printPortableBitMap($filename, $headDots){
+    private function printPortableBitMap($filename, $density='double', $dots='24-dots'){
+    	# density - enum('single', 'double');
+    	# dots - enum('8-dots','24-dots');
     	global $_LOG;
-    	
+
+    	$headDots= 8;
+    
     	$pbmf= fopen($filename, 'r');
     	$magicNumber= chop(fgets($pbmf));
     	if ($magicNumber != "P4") {
@@ -424,7 +427,7 @@ class pos_ticketPrinter{
     			$currVertBit= 1;
     			$currVertNumber= 0;
     			for ($line= 0; $line < $lineBuffHeight; $line++){
-    				if (ord(char($currHorzBit) & $lineBuff[$line][$currHorzByte])) $currVertNumber|= $currVertBit;
+    				if (ord(chr($currHorzBit) & $lineBuff[$line][$currHorzByte])) $currVertNumber|= $currVertBit;
     				$currVertBit<<= 1;
     			} 
     		}
@@ -471,7 +474,8 @@ class pos_ticketPrinter{
     	}
 */    	 
     	fclose($pbmf);
-		$this->insertDirectBlock($out);
+		$cmd= "\x1b*\x01". chr($lineBuffWidth % 256) . chr(floor($lineBuffWidth/256));
+		$this->insertDirectBlock("$cmd$out");
     }
 
 	private function print_Emphasized(){
@@ -483,7 +487,7 @@ class pos_ticketPrinter{
     }
     
     public function testCode(){
-    	$this->printPortableBitMap('./image/test-logo1.pbm', 8);
+    	$this->printPortableBitMap('./image/test-logo1.pbm');
     } 
     
     private function randomName($size,$prefix=""){
