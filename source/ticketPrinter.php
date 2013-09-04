@@ -289,7 +289,7 @@ class pos_ticketPrinter{
         }
         $this->printNow($filename);
         
-        unlink($filename);
+        //unlink($filename);
     }
     
     
@@ -388,13 +388,11 @@ class pos_ticketPrinter{
 		$this->insertDirectBlock($text);
     }
     
-    private function printPortableBitMap($filename, $density='double', $dots='24-dots'){
+    private function printPortableBitMap($filename, $density='single', $dots=24){
     	# density - enum('single', 'double');
-    	# dots - enum('8-dots','24-dots');
+    	# dots - 8 | 24;
     	global $_LOG;
 
-    	$headDots= 8;
-    
     	$pbmf= fopen($filename, 'r');
     	$magicNumber= chop(fgets($pbmf));
     	if ($magicNumber != "P4") {
@@ -413,69 +411,44 @@ class pos_ticketPrinter{
     	
     	//$this->insertDirectBlock("($width x $height) PBM\n");
     	
-    	$out='';
-    	$currLine= 0;
-    	$lineBuffWidth= $width >> 3;
-    	while ($currLine < $height){
-    		$lineBuffHeight= $height - $currLine < $headDots ? $height - $currLine : $headDots;
+    	
+    	$cmd= "";
+    	for ($lineCount= 0; $lineCount < $height / $dots; $lineCount++){
+			$lineChars= '';
+			$_LOG->log("line: $lineCount.");
+			    	
     		if (isset($lineBuff)) unset($lineBuff);
-    		for ($line=0; $line < $lineBuffHeight; $line++) $lineBuff[$line]= fread($pbmf, $lineBuffWidth);
+    		for ($y= 0; $y < $dots; $y++) $lineBuff[$y]= str_pad(fread($pbmf, $width>>3), $width>>3,"\x00");
+    		$_LOG->DEBUG("Line Buffer", $lineBuff);
     		
-    		for ($pos= 0; $pos < $width; $pos++){
-    			$currHorzBit= 128 >> ($pos % 8);
-    			$currHorzByte= floor($pos / 8);
-    			$currVertBit= 1;
-    			$currVertNumber= 0;
-    			for ($line= 0; $line < $lineBuffHeight; $line++){
-    				if (ord(chr($currHorzBit) & $lineBuff[$line][$currHorzByte])) $currVertNumber|= $currVertBit;
-    				$currVertBit<<= 1;
-    			} 
-    		}
-    		$out.= chr($currVertNumber);
-    		
-    		$currLine+= $lineBuffHeight;
-		}
-/*    	
-    	$out='';
-    	$currLine= 0;
-    	$lineBuffWidth= $width >> 3;
-    	$debug=array('width'=>$width, 'height'=>$height);
-    	$debug['lineBuffWidth']= $lineBuffWidth;
-    	while ($currLine < $height){
-    		$lineBuffHeight= $height - $currLine < $headDots ? $height - $currLine : $headDots;
-    		$debug['currLine']= $currLine;
-    		if (isset($lineBuff)) unset($lineBuff);
-    		for ($line=0; $line < $lineBuffHeight; $line++) $lineBuff[$line]= fread($pbmf, $lineBuffWidth);
-    		$debug['lineBuff']= $lineBuff;
-    		$_LOG->debug('line',$debug);
-
-    		for ($pos= 0; $pos < $width; $pos++){
-    			$currHorzBit= 128 >> ($pos % 8);
-    			$currHorzByte= floor($pos / 8);
-    			$currVertBit= 1;
-    			$currVertNumber= 0;
-    			$debug2=array('pos'=>$pos,'HorzBit'=>$currHorzBit,'HorzByte'=>$currHorzByte);
-    			for ($line= 0; $line < $lineBuffHeight; $line++){
-    				
-    				if (ord(chr($currHorzBit) & $lineBuff[$line][$currHorzByte])) $currVertNumber= $currVertNumber | $currVertBit;
-    				$debug2['linechar']= dechex(ord($lineBuff[$line][$currHorzByte]));
-    				$debug2['mask']= dechex(ord(chr($currHorzBit) & $lineBuff[$line][$currHorzByte]));
-    				$debug2['VertBit']=$currVertBit;
-    				$debug2['VertNumber']=$currVertNumber;
-    				$_LOG->debug('step',$debug2);
-    				
-    				$currVertBit<<= 1;
+    		for ($x= 0; $x < $width; $x++){
+    			$dotBuff= (int) 0; //do it with binary strings (php works only with floats).
+    			$dot= ((int) 1)<<($dots-1);
+    			for ($y= 0; $y < $dots; $y++){
+    				if (ord(chr(128>>($x % 8)) & $lineBuff[$y][floor($x/8)])) { $dotBuff|= $dot; }
+    				$_LOG->log("y: $y, dots: $dotBuff");
+    				$dot>>= 1;
     			}
+    			$_LOG->log("x: $x, dots: $dotBuff");
+    			
+    			for ($pow= pow(2, $dots-8); $pow > 1; $pow= $pow/256) {
+    				$dotBuff= $dotBuff % $pow; $lineChars.= chr(floor($dotBuff/$pow));
+    			}
+    			$lineChars.=chr($dotBuff);
+    			$_LOG->log("x: $x, line chars: $lineChars");
+    			
     		}
-    		$out.= chr($currVertNumber);
-    		$_LOG->debug('out',$out);
-    		
-    		$currLine+= $lineBuffHeight;
+    		$argm= $density == 'single' ? ($dots == 8 ? "\x00" : "\x01") : ($dots == 8 ? "\x20" : "\x21");
+    		$linecmd= "\x1b*$argm". chr($width % 256) . chr(floor($width / 256)) . "$lineChars\n";
+    		$_LOG->log("line cmd: $linecmd");
+    		$cmd.= $linecmd;
+			
     	}
-*/    	 
+		
+		
     	fclose($pbmf);
-		$cmd= "\x1b*\x01". chr($lineBuffWidth % 256) . chr(floor($lineBuffWidth/256));
-		$this->insertDirectBlock("$cmd$out");
+		$_LOG->debug('cmd',$cmd);
+		$this->insertDirectBlock("\x1b\x33\x00$cmd\x1b\x32");
     }
 
 	private function print_Emphasized(){
@@ -487,7 +460,7 @@ class pos_ticketPrinter{
     }
     
     public function testCode(){
-    	$this->printPortableBitMap('./image/test-logo1.pbm');
+    	$this->printPortableBitMap('./image/test-logo1.pbm','single',24);
     } 
     
     private function randomName($size,$prefix=""){
