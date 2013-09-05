@@ -15,6 +15,9 @@ class pos_terminalHandleTicket extends bas_frmx_form{
 		$ds->close();
 		
 		$printer = new pos_ticketPrinter();
+		$printer->testCode();
+		$printer->printTicket();
+		return;
 		
 		
 		$ticketNo[] = array("caption"=>"\nNo Ticket:","ticket"=>$this->curTicket);

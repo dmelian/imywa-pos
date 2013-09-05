@@ -415,39 +415,51 @@ class pos_ticketPrinter{
     	$cmd= "";
     	for ($lineCount= 0; $lineCount < $height / $dots; $lineCount++){
 			$lineChars= '';
-			$_LOG->log("line: $lineCount.");
+			$_LOG->log("line: $lineCount.",1,'printer');
 			    	
     		if (isset($lineBuff)) unset($lineBuff);
-    		for ($y= 0; $y < $dots; $y++) $lineBuff[$y]= str_pad(fread($pbmf, $width>>3), $width>>3,"\x00");
-    		$_LOG->DEBUG("Line Buffer", $lineBuff);
+    		for ($y= 0; $y < $dots; $y++) {
+    			$lineBuff[$y]= str_pad(fread($pbmf, $width>>3), $width>>3,"\x00");
+    			for ($log="line[$y]:",$i=0; $i<strlen($lineBuff[$y]); $i++) {
+    				$log.=str_pad(decbin(ord($lineBuff[$y][$i])),8,'0',STR_PAD_LEFT).'.';
+    			}
+    			if (!($y % 8)) $_LOG->log(' ... ',1,'printer');
+    			$_LOG->log($log,1,'printer');
+    		}
     		
     		for ($x= 0; $x < $width; $x++){
-    			$dotBuff= (int) 0; //do it with binary strings (php works only with floats).
-    			$dot= ((int) 1)<<($dots-1);
+    			$dotMatrix= str_pad('',$dots,'0');
     			for ($y= 0; $y < $dots; $y++){
-    				if (ord(chr(128>>($x % 8)) & $lineBuff[$y][floor($x/8)])) { $dotBuff|= $dot; }
-    				$_LOG->log("y: $y, dots: $dotBuff");
-    				$dot>>= 1;
+    				if (ord(chr(128>>($x % 8)) & $lineBuff[$y][floor($x/8)])) {
+    					$dotMatrix[$y]= '1'; 
+    				}
     			}
-    			$_LOG->log("x: $x, dots: $dotBuff");
+    			if (!($x % 8)) $_LOG->log(' ... ',1,'printer');
+    			$logMatrix= implode('.', str_split($dotMatrix,8));
+    			$_LOG->log("col x: $x, dots: $logMatrix",1,'printer');
     			
-    			for ($pow= pow(2, $dots-8); $pow > 1; $pow= $pow/256) {
-    				$dotBuff= $dotBuff % $pow; $lineChars.= chr(floor($dotBuff/$pow));
-    			}
-    			$lineChars.=chr($dotBuff);
-    			$_LOG->log("x: $x, line chars: $lineChars");
-    			
+    			$chrs='';
+				for ($ichr=0; $ichr<$dots/8; $ichr++){
+					$chr= 0;
+					for ($i=0,$bit=128; $i<8; $i++,$bit>>=1) {
+						$chr+= $dotMatrix[$ichr*8+$i] == '1' ? $bit : 0;
+//						$_LOG->log("i= $i; chr= $chr; bit= $bit.",1,'printer');
+					}
+					$_LOG->log("char[$ichr]=$chr",1,'printer');
+					$chrs.= chr($chr); 
+				}
+				for ($log='chars:',$ichr=0; $ichr<$dots/8; $ichr++){ $log.='.'.dechex(ord($chrs[$ichr])); }
+				$_LOG->log($log,1,'printer');
+				$lineChars.= $chrs;
     		}
-    		$argm= $density == 'single' ? ($dots == 8 ? "\x00" : "\x01") : ($dots == 8 ? "\x20" : "\x21");
+    		$argm= $dots == 8 ? ($density == 'single' ? "\x00" : "\x01") : ($density == 'single' ? "\x20" : "\x21");
     		$linecmd= "\x1b*$argm". chr($width % 256) . chr(floor($width / 256)) . "$lineChars\n";
-    		$_LOG->log("line cmd: $linecmd");
     		$cmd.= $linecmd;
 			
     	}
 		
 		
     	fclose($pbmf);
-		$_LOG->debug('cmd',$cmd);
 		$this->insertDirectBlock("\x1b\x33\x00$cmd\x1b\x32");
     }
 
@@ -460,7 +472,27 @@ class pos_ticketPrinter{
     }
     
     public function testCode(){
-    	$this->printPortableBitMap('./image/test-logo1.pbm','single',24);
+    	$bitmap= './image/test-logo.pbm';
+    	$dots= 8;
+    	
+    	$density= 'single';
+    	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
+    	$this->printPortableBitMap($bitmap,$density,$dots);
+    	
+    	$density= 'double';
+    	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
+    	$this->printPortableBitMap($bitmap,$density,$dots);
+    	
+    	$dots= 24;
+    	
+    	$density= 'single';
+    	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
+    	$this->printPortableBitMap($bitmap,$density,$dots);
+    	
+    	$density= 'double';
+    	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
+    	$this->printPortableBitMap($bitmap,$density,$dots);
+    	
     } 
     
     private function randomName($size,$prefix=""){
