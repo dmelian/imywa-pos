@@ -388,10 +388,9 @@ class pos_ticketPrinter{
 		$this->insertDirectBlock($text);
     }
     
-    private function printPortableBitMap($filename, $density='single', $dots=24){
+    public function printPortableBitMap($filename, $density='single', $dots=24){
     	# density - enum('single', 'double');
     	# dots - 8 | 24;
-    	global $_LOG;
 
     	$pbmf= fopen($filename, 'r');
     	$magicNumber= chop(fgets($pbmf));
@@ -402,65 +401,35 @@ class pos_ticketPrinter{
     	}
     	
     	$dimensions= chop(fgets($pbmf));
-    	//Ignore comments begining with #
-    	if (substr($dimensions,0,1) == '#') {
-    		$_LOG->debug("PBM comment found.", $dimensions);
-    		$dimensions= chop(fgets($pbmf));
-    	}
+    	if (substr($dimensions,0,1) == '#') $dimensions= chop(fgets($pbmf)); //Ignore comments begining with #
     	list($width,$height) = explode(' ',$dimensions); 
     	
-    	//$this->insertDirectBlock("($width x $height) PBM\n");
-    	
-    	
-    	$cmd= "";
+    	$cmd= '';
     	for ($lineCount= 0; $lineCount < $height / $dots; $lineCount++){
 			$lineChars= '';
-			$_LOG->log("line: $lineCount.",1,'printer');
 			    	
     		if (isset($lineBuff)) unset($lineBuff);
-    		for ($y= 0; $y < $dots; $y++) {
-    			$lineBuff[$y]= str_pad(fread($pbmf, $width>>3), $width>>3,"\x00");
-    			for ($log="line[$y]:",$i=0; $i<strlen($lineBuff[$y]); $i++) {
-    				$log.=str_pad(decbin(ord($lineBuff[$y][$i])),8,'0',STR_PAD_LEFT).'.';
-    			}
-    			if (!($y % 8)) $_LOG->log(' ... ',1,'printer');
-    			$_LOG->log($log,1,'printer');
-    		}
+    		for ($y= 0; $y < $dots; $y++) $lineBuff[$y]= str_pad(fread($pbmf, $width>>3), $width>>3,"\x00");
     		
     		for ($x= 0; $x < $width; $x++){
-    			$dotMatrix= str_pad('',$dots,'0');
+    			$dotMatrix= str_pad('',$dots,'0'); // php and integers are on war
     			for ($y= 0; $y < $dots; $y++){
-    				if (ord(chr(128>>($x % 8)) & $lineBuff[$y][floor($x/8)])) {
-    					$dotMatrix[$y]= '1'; 
-    				}
+    				if (ord(chr(128>>($x % 8)) & $lineBuff[$y][floor($x/8)])) $dotMatrix[$y]= '1'; 
     			}
-    			if (!($x % 8)) $_LOG->log(' ... ',1,'printer');
-    			$logMatrix= implode('.', str_split($dotMatrix,8));
-    			$_LOG->log("col x: $x, dots: $logMatrix",1,'printer');
     			
-    			$chrs='';
 				for ($ichr=0; $ichr<$dots/8; $ichr++){
 					$chr= 0;
-					for ($i=0,$bit=128; $i<8; $i++,$bit>>=1) {
-						$chr+= $dotMatrix[$ichr*8+$i] == '1' ? $bit : 0;
-//						$_LOG->log("i= $i; chr= $chr; bit= $bit.",1,'printer');
-					}
-					$_LOG->log("char[$ichr]=$chr",1,'printer');
-					$chrs.= chr($chr); 
+					for ($i=0,$bit=128; $i<8; $i++,$bit>>=1) $chr+= $dotMatrix[$ichr*8+$i] == '1' ? $bit : 0;
+					$lineChars.= chr($chr); 
 				}
-				for ($log='chars:',$ichr=0; $ichr<$dots/8; $ichr++){ $log.='.'.dechex(ord($chrs[$ichr])); }
-				$_LOG->log($log,1,'printer');
-				$lineChars.= $chrs;
     		}
     		$argm= $dots == 8 ? ($density == 'single' ? "\x00" : "\x01") : ($density == 'single' ? "\x20" : "\x21");
-    		$linecmd= "\x1b*$argm". chr($width % 256) . chr(floor($width / 256)) . "$lineChars\n";
-    		$cmd.= $linecmd;
+    		$cmd.= "\x1b*$argm". chr($width % 256) . chr(floor($width / 256)) . "$lineChars\n"; // ESC *
 			
     	}
 		
-		
     	fclose($pbmf);
-		$this->insertDirectBlock("\x1b\x33\x00$cmd\x1b\x32");
+		$this->insertDirectBlock("\x1b\x33\x00$cmd\x1b\x32"); // ESC 3 0 for no line spacing and ESC 2 to restore it.
     }
 
 	private function print_Emphasized(){
@@ -471,24 +440,28 @@ class pos_ticketPrinter{
 		return $text;
     }
     
-    public function testCode(){
+    public function test_printPortableBitMap(){
     	$bitmap= './image/test-logo.pbm';
     	$dots= 8;
     	
+    	$bitmap= './image/test-logo-256x64-sng-8d.pbm';
     	$density= 'single';
     	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
     	$this->printPortableBitMap($bitmap,$density,$dots);
     	
+    	$bitmap= './image/test-logo-512x64-dbl-8d.pbm';
     	$density= 'double';
     	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
     	$this->printPortableBitMap($bitmap,$density,$dots);
     	
     	$dots= 24;
     	
+    	$bitmap= './image/test-logo-256x192-sng-24d.pbm';
     	$density= 'single';
     	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
     	$this->printPortableBitMap($bitmap,$density,$dots);
     	
+    	$bitmap= './image/test-logo-512x192-dbl-24d.pbm'; // Same vertical and horizontal scale.
     	$density= 'double';
     	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
     	$this->printPortableBitMap($bitmap,$density,$dots);

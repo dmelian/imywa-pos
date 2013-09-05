@@ -15,10 +15,6 @@ class pos_terminalHandleTicket extends bas_frmx_form{
 		$ds->close();
 		
 		$printer = new pos_ticketPrinter();
-		$printer->testCode();
-		$printer->printTicket();
-		return;
-		
 		
 		$ticketNo[] = array("caption"=>"\nNo Ticket:","ticket"=>$this->curTicket);
 		$printer->insertBlocK("ticketNo",$ticketNo);
@@ -66,8 +62,6 @@ class pos_terminalHandleTicket extends bas_frmx_form{
 		
 		$qry = "select ticketHeader as header, ticketFooter as footer from pos where id=1";
 		$dataset= new bas_sql_myquery($qry);
-		
-		$printer->testCode();
 		
 		$printer->setHeader($dataset->result['header'],"default","alignCenter","none","heavy");		
 		$printer->setFooter($dataset->result['footer'],"default","alignCenter","none","huge");
