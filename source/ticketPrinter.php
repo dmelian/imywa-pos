@@ -289,7 +289,7 @@ class pos_ticketPrinter{
         }
         $this->printNow($filename);
         
-        //unlink($filename);
+        unlink($filename);
     }
     
     
@@ -380,15 +380,7 @@ class pos_ticketPrinter{
 		return $text;
     }
     
-    
-    private function printBitMapSimple(){
-		$text = "\x1b*\x01\x00\x02";
-		for($ind=0;$ind<63;$ind++)		$text .="\xff\x81\x81\x81\x81\x81\x81\xff";
-		$text .="\xff\xff\xff\xff\xff\xff\xff\xff";
-		$this->insertDirectBlock($text);
-    }
-    
-    public function printPortableBitMap($filename, $density='single', $dots=24){
+    public function printPortableBitMap($filename, $density='double', $dots=24){
     	# density - enum('single', 'double');
     	# dots - 8 | 24;
 
@@ -441,9 +433,7 @@ class pos_ticketPrinter{
     }
     
     public function test_printPortableBitMap(){
-    	$bitmap= './image/test-logo.pbm';
     	$dots= 8;
-    	
     	$bitmap= './image/test-logo-256x64-sng-8d.pbm';
     	$density= 'single';
     	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
@@ -455,7 +445,6 @@ class pos_ticketPrinter{
     	$this->printPortableBitMap($bitmap,$density,$dots);
     	
     	$dots= 24;
-    	
     	$bitmap= './image/test-logo-256x192-sng-24d.pbm';
     	$density= 'single';
     	$this->insertDirectBlock("file: $bitmap, density: $density, dots: $dots\n");
